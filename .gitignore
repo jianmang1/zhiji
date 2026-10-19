@@ -1,0 +1,26 @@
+# ── Python / 后端 ──
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# ── 环境与密钥（仅提交 .env.example）──
+.env
+.env.*
+!.env.example
+
+# ── Node / Taro 前端（Phase 2 待建）──
+node_modules/
+dist/
+.temp/
+.rn_temp/
+
+# ── 系统 ──
+.DS_Store
+Thumbs.db

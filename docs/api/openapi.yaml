@@ -1,0 +1,385 @@
+openapi: 3.0.3
+info:
+  title: 执己 API
+  description: 执己（从认知到执行）个人数据中枢小程序后端契约 v1.0。前后端唯一接口契约，归属 Aurora KB。
+  version: 1.0.0
+servers:
+  - url: https://api.zhiji.app/v1
+    description: 生产
+  - url: http://localhost:8000/v1
+    description: 本地开发
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    BadRequest:
+      description: 请求错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: 未找到
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: 未认证
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required: [code, message]
+    WxLoginRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          description: wx.login 返回的临时登录 code
+      required: [code]
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          default: bearer
+        expires_in:
+          type: integer
+        user_id:
+          type: string
+      required: [access_token, token_type, user_id]
+    Event:
+      type: object
+      properties:
+        id:
+          type: integer
+        domain:
+          type: string
+          enum: [health, work, consumption, capability, interest]
+        type:
+          type: string
+        ts:
+          type: string
+          format: date-time
+        payload:
+          type: object
+          additionalProperties: true
+        source:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required: [id, domain, type, ts, payload, source]
+    EventCreate:
+      type: object
+      properties:
+        domain:
+          type: string
+          enum: [health, work, consumption, capability, interest]
+        type:
+          type: string
+        ts:
+          type: string
+          format: date-time
+        payload:
+          type: object
+          additionalProperties: true
+        source:
+          type: string
+          default: manual
+      required: [domain, type, ts, payload]
+    Goal:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        domain:
+          type: string
+          enum: [health, work, consumption, capability, interest]
+        status:
+          type: string
+          enum: [active, done, dropped]
+          default: active
+        created_at:
+          type: string
+          format: date-time
+      required: [id, title, domain]
+    Plan:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        generated_by:
+          type: string
+        based_on:
+          type: object
+          additionalProperties: true
+        content:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+      required: [id, title, generated_by, content]
+    AnalyticsSummary:
+      type: object
+      properties:
+        total_events:
+          type: integer
+        by_domain:
+          type: object
+          additionalProperties:
+            type: integer
+        latest_plan_at:
+          type: string
+          format: date-time
+          nullable: true
+security:
+  - bearerAuth: []
+paths:
+  /auth/wx-login:
+    post:
+      summary: 微信登录换取 JWT
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WxLoginRequest'
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /events:
+    get:
+      summary: 查询事件（按域/时间过滤）
+      tags: [events]
+      parameters:
+        - name: domain
+          in: query
+          schema:
+            type: string
+            enum: [health, work, consumption, capability, interest]
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: 事件列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+    post:
+      summary: 创建事件
+      tags: [events]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventCreate'
+      responses:
+        '201':
+          description: 已创建
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+  /events/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: 获取单条事件
+      tags: [events]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: 更新事件
+      tags: [events]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventCreate'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: 删除事件
+      tags: [events]
+      responses:
+        '204':
+          description: 已删除
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /goals:
+    get:
+      summary: 列出目标
+      tags: [goals]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Goal'
+    post:
+      summary: 创建目标
+      tags: [goals]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                domain:
+                  type: string
+                  enum: [health, work, consumption, capability, interest]
+              required: [title, domain]
+      responses:
+        '201':
+          description: 已创建
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Goal'
+  /plans:
+    get:
+      summary: 列出行动方案
+      tags: [plans]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Plan'
+    post:
+      summary: 创建行动方案（分析引擎写入）
+      tags: [plans]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                generated_by:
+                  type: string
+                based_on:
+                  type: object
+                  additionalProperties: true
+                content:
+                  type: object
+                  additionalProperties: true
+              required: [title, generated_by, content]
+      responses:
+        '201':
+          description: 已创建
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+  /analytics/summary:
+    get:
+      summary: 数据概览
+      tags: [analytics]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /analytics/domain/{domain}:
+    parameters:
+      - name: domain
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [health, work, consumption, capability, interest]
+    get:
+      summary: 单域分析
+      tags: [analytics]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
