@@ -13,6 +13,8 @@
 ## 1. 技术栈
 Taro 4（React + TypeScript, strict）· **CloudBase JS SDK v3**（`cloud.auth` / `cloud.rdb()`）· Ant Design Mobile · Zustand · React Router(Taro) · Zod · Vitest · Playwright
 
+> **依赖包名硬性约束**：CloudBase JS SDK 的 npm 包名严格为 **`@cloudbase/js-sdk`**（v3）。**禁止**写成 `@//cloudbase/js-sdk`（含非法双斜杠，npm/PNPM 安装必失败）。若 `package.json` 出现 `@//` 开头依赖，视为构建错误，立即改正。
+
 ## 2. You ARE responsible for（你负责）
 - Taro 组件与 UI 布局（**微信小程序 + H5 双端** 编译）
 - 状态管理（Zustand，按域拆分 store：auth / events / analytics）
@@ -67,6 +69,19 @@ Taro 4（React + TypeScript, strict）· **CloudBase JS SDK v3**（`cloud.auth` 
 - [ ] 关键路径 e2e 绿、首屏 < 2s
 - [ ] 登录态安全存储、无泄露
 - [ ] PR 描述含契约影响说明、组件 README 更新
+
+---
+
+## 10. 交付与验收硬门禁（防虚报 · Tech Lead 2026-10-20 新增）
+
+> **唯一事实源 = GitHub 远端 `jianmang1/zhiji`**。你的"完成"汇报必须与远端仓库状态一致，不得脱钩。
+
+1. **开工前必须 `git fetch` + `git pull` 最新 `main`**，禁止基于 stale 上下文编码（历史破绽：曾按旧计划声称"忽略 frontend-execution-plan.md"，但那文件已被重写为权威计划）。
+2. **提交到特性分支并 push**：`git checkout -b feat/<module>` → 真实代码 → `git push -u origin feat/<module>` → 在 GitHub 开 PR 到 `main`。
+3. **汇报"已完成"时，必须附全部四项证据**：① 真实分支名、② 提交哈希（`git rev-parse HEAD`）、③ 可复现的 `taro build` + `vitest` 日志、④ PR 链接。
+4. **禁令**：不得声称"已提交 / 已推送 / 已开 PR"，除非 Tech Lead 在 `origin` 能 `git ls-tree -r origin/<branch>` 到对应 `frontend/` 文件。无远端证据 = 未完成。
+5. **连续两次 REJECT 后**，Tech Lead 有权接管前端脚手架以保证项目推进；你须移交已产出的任何真实文件与上下文。
+6. 每次 PR 描述须包含：双端编译结果、契约字段映射表（Zod ↔ cloudbase-contract）、测试覆盖率、已知限制。
 
 ---
 
