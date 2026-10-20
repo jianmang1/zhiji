@@ -5,7 +5,7 @@ from cryptography.fernet import Fernet, InvalidToken
 
 from zhiji_cloudbase.config import fernet_key
 
-SENSITIVE_DOMAINS = frozenset({"health", "consumption"})
+SENSITIVE_DOMAINS = frozenset({"health", "dating"})
 ENVELOPE_KEY = "_encrypted_v1"
 
 

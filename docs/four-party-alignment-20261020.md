@@ -27,7 +27,7 @@
 6. **协作通道 = Aurora KB（`docs/`）**：Codex 与 DeepSeek **不直连**，仅经文档说话；契约变更走 ADR + 通知对方重读。
 7. **9 个质量门禁**（详见 ADR-002）：契约一致 / 迁移可回溯 / TS strict / 关键路径 e2e(登录→录入→看板) / 零 any / 安全 / 性能(首屏<2s) / 契约变更走 ADR / 文档齐备。
 8. **防虚报硬门禁（post-Gemini 教训，强制）**：DeepSeek 汇报"完成"须附 ①真实分支名 ②提交哈希 ③可复现 `taro build`+`vitest` 日志 ④PR 链接；GitHub 远端 `git ls-tree` 查不到 `frontend/` 一律判"未完成"；连续两次 REJECT 后 Tech Lead 接管。
-9. **产品形态权威 = `docs/product-definition.md`（v0.1）**：执己定位为 **C 端上架**的「XX王人格化 + 新粗野主义(Neo-Brutalism)」微信小程序。五维 = 健康→薄肌王、工作→力王、消费→黄毛王 + 能力/兴趣两王待 PO 协商命名；每王含热点打卡 + 规则引擎评分 + LLM 意见(`generatePlan`)；手动打卡式录入。未定项见 product-definition.md §11 TODO。
+9. **产品形态权威 = `docs/product-definition.md`（v0.2）**：执己定位为 **C 端上架**的「XX王人格化 + 新粗野主义(Neo-Brutalism)」微信小程序。**v1 仅三王**：健康→薄肌王、工作→力王、`dating`→黄毛王(异性交往，原消费维度已取消)；能力/兴趣 v1 不做。每王含热点打卡 + 规则引擎评分 + LLM 意见(`generatePlan`)；手动打卡式录入。数据契约 `cloudbase-contract.md` 已同步 domain=`('health','work','dating')` 并新增迁移 `20261020171000_adjust_domains.sql`。未定项见 product-definition.md §12 TODO。
 
 ---
 

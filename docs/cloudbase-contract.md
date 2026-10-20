@@ -1,8 +1,10 @@
-# 数据契约 v1（CloudBase 原生 · public schema）
+# 数据契约 v1.1（CloudBase 原生 · public schema）
 
 > 这是 **执己** 项目在 CloudBase 原生模型下的**唯一数据契约**（原则三）。
 > 取代原 `docs/api/openapi.yaml` 作为前端数据访问契约；openapi.yaml 降为可选 HTTP 云函数端点文档。
 > Codex（云函数）/ DeepSeek（前端 SDK）均以此文档为准，互不直连。
+>
+> **2026-10-20 更新（v1.1）**：PO 决策——取消 `consumption` 维度、黄毛王改为异性交往 `dating`、v1 仅三域；`capability`/`interest` 后续扩展。
 
 ## 1. 鉴权模型
 
@@ -17,11 +19,11 @@
 |------|------|------|------|
 | id | bigint | PK, IDENTITY | 自增 |
 | user_id | uuid | NOT NULL | 当前用户（= auth.uid()） |
-| domain | text | `CHECK IN ('health','work','consumption','capability','interest')` | 五域之一 |
-| type | text | NOT NULL | 域内事件类型（sleep/expense/focus_session/...） |
+| domain | text | `CHECK IN ('health','work','dating')` | 三域之一（v1）；capability/interest 后续扩展 |
+| type | text | NOT NULL | 域内事件类型（water/workout/date_session/...） |
 | ts | timestamptz | NOT NULL | 事件发生时间（核心索引） |
 | payload | jsonb | NOT NULL | 结构化明细，按 domain+type 约定 schema |
-| source | text | NOT NULL | 录入来源（manual/wechat_sport/bank_csv/...） |
+| source | text | NOT NULL | 录入来源（manual/wechat_sport/...） |
 | created_at | timestamptz | NOT NULL DEFAULT now() | 入库时间 |
 
 索引：`ix_events_user_ts(user_id, ts)`、`ix_events_domain(domain)`
@@ -41,7 +43,7 @@
 | id | uuid | PK, DEFAULT gen_random_uuid() | |
 | user_id | uuid | NOT NULL | |
 | title | text | NOT NULL | |
-| domain | text | `CHECK IN (五域)` | 关联域 |
+| domain | text | `CHECK IN ('health','work','dating')` | 关联域（v1 三域） |
 | status | text | DEFAULT 'active', `CHECK IN ('active','done','dropped')` | |
 | created_at | timestamptz | NOT NULL DEFAULT now() | |
 
@@ -60,15 +62,14 @@
 
 索引：`ix_plans_user_id(user_id)`
 
-## 3. 各域 type 与 payload 草案（待 PO 确认粒度）
+## 3. 各域 type 与 payload 草案（v1 三王）
 
-- **health**：sleep{duration,hour,quality} / steps{count} / weight{kg} / workout{type,duration_min,calorie} / mood{score} / water{ml}
-- **work**：focus_session{duration_min,project} / task{done,pomodoro} / meeting{duration_min,title}
-- **consumption**：expense{amount,category,merchant,pay_method} / income{amount,source} / subscription{name,amount,cycle}
-- **capability**：skill_log{name,hours} / learning{resource,hours} / cert{name,status}
-- **interest**：read{title,topic,mins} / hobby{log,mins} / topic_follow{name}
+- **health（薄肌王）**：`water{ml}` / `sleep{duration_h,quality}` / `workout{type,duration_min,calorie}`
+- **work（力王）**：`work_log{hours,wage,salary,commute_min}`
+- **dating（黄毛王·异性交往）**：`date_session{count,chat_min,initiative}` / `relationship_status{stage}` —— 热点维度 TODO PO 细化
+- *扩展域 `capability`/`interest` 后续版本加入，v1 不含。*
 
-> 敏感字段（健康明细、消费金额/商户）建议应用层加密后再入 `payload`（门禁 6）。
+> 敏感字段（健康明细、异性交往明细）建议应用层加密后再入 `payload`（门禁 6）。
 
 ## 4. 行级安全（RLS，每用户隔离）
 
@@ -86,11 +87,11 @@
 | `generatePlan` | based_on（查询范围） | 调 LLM 分析 → 写 plans（generated_by 记模型） | 新方案 id | 本地已实现并通过单元测试；待云端联调 |
 | `listPlans` | — | 按当前用户查 plans | 方案列表 |
 
-> 非敏感数据的高频读写可由前端直接 `cloud.rdb()` 完成（受 RLS）。**health/consumption 事件必须通过 `recordEvent` 写入、通过 `listEvents` 读取**，由云函数负责加密和解密 payload；不得由客户端直接写入或读取敏感事件 payload。复杂聚合与 AI 分析走云函数。
+> 非敏感数据的高频读写可由前端直接 `cloud.rdb()` 完成（受 RLS）。**health/dating 敏感事件必须通过 `recordEvent` 写入、通过 `listEvents` 读取**，由云函数负责加密和解密 payload；不得由客户端直接写入或读取敏感事件 payload。复杂聚合与 AI 分析走云函数。
 
 ## 6. 图分析（环路检测等）
 
-- 边由 events + tags 派生（如 capability→interest 投入关系）。
+- 边由 events + tags 派生（后续扩展域可形成跨域投入关系，v1 三域暂不构图）。
 - v1 用云函数内 networkx / SQL 递归 CTE；Neo4j 仅当触发条件满足后评估（见 ADR-001 §4）。
 
 ## 7. 变更流程（质量门禁 8）

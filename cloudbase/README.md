@@ -6,7 +6,7 @@ Python 3.11 HTTP 云函数实现 `cloudbase-contract.md` 中的 `recordEvent`、
 
 - CloudBase 官方支持 JS `app.rdb()` 客户端；Python 云函数用 CloudBase PostgreSQL HTTP API 访问 PG。函数把登录用户的 Bearer access token 透传给 PG REST API，让 `authenticated` 角色和 RLS 校验每次读写，不使用 service role。
 - Functions 是 HTTP 云函数，监听 9000 端口。请求体直接是契约入参，调用时使用 `POST /v1/functions/{functionName}?webfn=true` 并携带当前用户 access token。
-- `recordEvent` 会在写库前用 `FERNET_ENCRYPTION_KEY` 加密 `health` / `consumption` 域 payload。密文保存为 JSONB envelope `{"_encrypted_v1":"..."}`；`listEvents` 与 `generatePlan` 在服务端解密。其他域 payload 保持原 JSON 对象。
+- `recordEvent` 会在写库前用 `FERNET_ENCRYPTION_KEY` 加密 `health` / `dating` 域 payload。密文保存为 JSONB envelope `{"_encrypted_v1":"..."}`；`listEvents` 与 `generatePlan` 在服务端解密。其他域 payload 保持原 JSON 对象。
 - `generatePlan` 按 `based_on` 的 domain/range 通过用户 token 查询最多 200 条 RLS 可见事件，调用 CloudBase 内置模型，再将模型名、过滤范围、事件 ID 列表和方案 JSON 写入 `plans`。生成失败时不会写入方案。
 - 未在请求或日志中输出 token、密钥或事件内容。事件查询只接受契约支持的过滤字段。
 

@@ -235,10 +235,10 @@ def test_record_event_encrypts_sensitive_payload_and_uses_authenticated_owner():
     status, response = dispatch(
         "recordEvent",
         {
-            "domain": "consumption",
-            "type": "expense",
+            "domain": "dating",
+            "type": "date_session",
             "ts": "2026-10-20T12:00:00+08:00",
-            "payload": {"amount": 35.5, "merchant": "private shop"},
+            "payload": {"chat_min": 30, "note": "private shop"},
         },
         auth_headers(token),
         gateway_factory=factory,

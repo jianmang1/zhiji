@@ -12,7 +12,7 @@ def fernet_key() -> str:
     value = os.getenv("FERNET_ENCRYPTION_KEY", "").strip()
     if not value:
         raise RuntimeError(
-            "FERNET_ENCRYPTION_KEY is required for health/consumption events"
+            "FERNET_ENCRYPTION_KEY is required for health/dating events"
         )
     return value
 

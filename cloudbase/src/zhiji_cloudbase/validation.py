@@ -3,7 +3,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-Domain = Literal["health", "work", "consumption", "capability", "interest"]
+Domain = Literal["health", "work", "dating"]
 
 
 class EventInput(BaseModel):
