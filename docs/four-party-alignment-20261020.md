@@ -27,6 +27,7 @@
 6. **协作通道 = Aurora KB（`docs/`）**：Codex 与 DeepSeek **不直连**，仅经文档说话；契约变更走 ADR + 通知对方重读。
 7. **9 个质量门禁**（详见 ADR-002）：契约一致 / 迁移可回溯 / TS strict / 关键路径 e2e(登录→录入→看板) / 零 any / 安全 / 性能(首屏<2s) / 契约变更走 ADR / 文档齐备。
 8. **防虚报硬门禁（post-Gemini 教训，强制）**：DeepSeek 汇报"完成"须附 ①真实分支名 ②提交哈希 ③可复现 `taro build`+`vitest` 日志 ④PR 链接；GitHub 远端 `git ls-tree` 查不到 `frontend/` 一律判"未完成"；连续两次 REJECT 后 Tech Lead 接管。
+9. **产品形态权威 = `docs/product-definition.md`（v0.1）**：执己定位为 **C 端上架**的「XX王人格化 + 新粗野主义(Neo-Brutalism)」微信小程序。五维 = 健康→薄肌王、工作→力王、消费→黄毛王 + 能力/兴趣两王待 PO 协商命名；每王含热点打卡 + 规则引擎评分 + LLM 意见(`generatePlan`)；手动打卡式录入。未定项见 product-definition.md §11 TODO。
 
 ---
 
@@ -48,6 +49,7 @@
 - [ ] ReactFlow 血缘图小程序端兼容性 spike（文章仅验证 Web 端 1000+ 节点）。
 - [ ] GitHub 仓 `jianmang1/zhiji` 建议设为 Private（若尚未）。
 - [ ] 后端单测门禁由 ≥70% 上调至 ≥80%（R3，待 PO 确认）。
+- [ ] 产品形态已升级（XX王 + C 端上架 + 新粗野风），DeepSeek 派发须纳入视觉风格与各王体系；五王全定后回改 `cloudbase-contract.md` 的 `events.payload` 结构（见 product-definition.md §13）。
 
 ---
 

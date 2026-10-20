@@ -3,6 +3,8 @@
 > 本文档与 `ADR-001-tech-stack.md`、`data-model-v1.md`、`api/openapi.yaml` 共同构成 **Aurora KB（契约中枢）**。前后端 Agent 仅通过这些文档协作，互不直连。
 
 ## 1. 产品形态明确
+> ⚠️ **本节为 v1 历史基线（2026-10-19），已过期。** 产品形态已于 2026-10-20 升级为「XX王人格化 + C 端上架 + 新粗野主义」形态，权威定义见 [product-definition.md](./product-definition.md)。本文件 §2–§7 亦基于已废弃的 FastAPI 旧栈，仅作历史参考；当前架构见 `ADR-002-cloudbase-native.md`。
+
 - 产品名：**执己**（全称「执己 · 从认知到执行」）
 - 形态：**微信小程序**（Taro 编译，同源出 H5 网页）
 - 目标用户：单用户（产品负责人本人）起步；数据模型预留 `user_id` 以支持多用户
