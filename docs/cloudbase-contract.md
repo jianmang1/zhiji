@@ -1,10 +1,10 @@
-# 数据契约 v1.2（CloudBase 原生 · public schema）
+# 数据契约 v1.3（CloudBase 原生 · public schema）
 
 > 这是 **执己** 项目在 CloudBase 原生模型下的**唯一数据契约**（原则三）。
 > 取代原 `docs/api/openapi.yaml` 作为前端数据访问契约；openapi.yaml 降为可选 HTTP 云函数端点文档。
 > Codex（云函数）/ DeepSeek（前端 SDK）均以此文档为准，互不直连。
 >
-> **2026-10-20 更新（v1.2，已达可派发状态）**：黄毛王(dating)热点维度由 PO 锁定为 4 类（approach/date/chat/stage）；新增 `generatePlan` 统一输出 schema（§5.1）。评分阈值与等级命名已由 PO 冻结（见 product-definition.md §5）；主色板 PO 决定不冻结、由前端按粗野风自选（受约束）。**v1 契约进入可派发状态**——派发 DeepSeek 前不应再改 payload/type/评分/LLM schema；此后变更须走 ADR+PR（门禁 8）。
+> **2026-10-20 更新（v1.3）**：新增 §8 增长漏斗分析层（`analytics_events` + `profiles` 表，**前向兼容**：v1 即建表，Phase 3 做计算；不改动已冻结的 domain payload / 评分 / LLM schema）。v1.2 冻结项（dating 4 类热点、评分阈值、等级命名、generatePlan schema）维持不变。
 
 ## 1. 鉴权模型
 
@@ -122,3 +122,47 @@ LLM 产出的 `plans.content` 必须符合以下 JSON 结构（三王通用，Co
 ## 7. 变更流程（质量门禁 8）
 
 任何表/字段/RLS/云函数签名变更：先写 ADR → 更新本文档 → `managePgDatabase applyMigration`（带回滚 SQL）→ 通知 DeepSeek 重读。
+
+## 8. 增长漏斗与精细化分析层（前向兼容 · v1 建表，Phase 3 计算）
+
+> 依据 product-definition.md §15。目标：漏斗瓶颈定位、渠道质量、体验指标、A/B、分群运营。
+> **v1 即建表 + 埋点**；完整聚合/可视化计算放 Phase 3。新增表**不改动** §2–§5 已冻结结构。
+
+### analytics_events（行为/漏斗事件）
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | bigint | PK, IDENTITY | |
+| user_id | uuid | NOT NULL | = auth.uid() |
+| name | text | NOT NULL | 行为名：`app_open`/`view_king`/`complete_checkin`/`share`/`stage_up`/`log_spending`/... |
+| step | text | | 漏斗步：`acquire`/`activate`/`retain`/`result`/`refer`（可选，用于 Phase 3 聚合） |
+| domain | text | `CHECK IN ('health','work','dating')` | 关联王（可选） |
+| channel | text | | 获客渠道：`wechat_search`/`moments_ad`/`friend_share`/`organic` |
+| region | text | | 地域（省/市，可选） |
+| user_type | text | | `new`/`returning`；dating 域可加 `gender` |
+| variant | text | | A/B 实验分组（Phase 3） |
+| payload | jsonb | NOT NULL DEFAULT '{}' | 扩展：如 spending `{category, amount}` |
+| ts | timestamptz | NOT NULL DEFAULT now() | |
+
+索引：`ix_analytics_user_ts(user_id, ts)`、`ix_analytics_name(name)`
+
+### profiles（用户分群维度，v1 即建）
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| user_id | uuid | PK, = auth.uid() | |
+| region | text | | 地域 |
+| user_type | text | DEFAULT 'new', `CHECK IN ('new','returning')` | |
+| acquire_channel | text | | 首次获客渠道（渠道质量评估） |
+| gender | text | | dating 域可选（`male`/`female`/`other`） |
+| created_at | timestamptz | NOT NULL DEFAULT now() | |
+
+### 力王`消费`步骤的轻量行为事件（不复活 consumption 域）
+- 用 `analytics_events`(name=`log_spending`, domain=`work`, payload=`{category, amount}`) 记录。
+- `category` 枚举：`rent`(房租, 与力王程度**正比**) / `hedonic`(奶茶·烧烤·小吃等享乐, **反比**) / `for_others`(花在别人身上, **正比**) / `other`。
+- v1 仅作漏斗"消费"步完成信号；Phase 3 据 category 做力王消费观洞察（正比/反比加权）。
+
+### 云函数（Phase 3 计算，v1 可仅存）
+- `trackAnalytics`：前端直接 `cloud.rdb()` 写 `analytics_events`（非敏感，受 RLS）；无需云函数。
+- `getFunnel(domain, range, segment?)`：聚合 `analytics_events` + `events` 成漏斗（各步转化率/drop-off/瓶颈步），按 `channel`/`region`/`user_type` 分群。Phase 3 实现，v1 前端看板可先拉原始事件本地算基础漏斗。
+
+### RLS
+`analytics_events` / `profiles` 同 §4：`ENABLE RLS`，策略 `USING (user_id = auth.uid())`；云函数(service_role) 可越权做分群聚合。

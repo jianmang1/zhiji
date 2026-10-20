@@ -25,17 +25,18 @@
 ## 4. 状态管理（Zustand）
 - `authStore`：`cloud.auth` 登录态、user_id、login()/logout()，登录态安全存储到 `Taro.storage`（不进 Git、不明文泄露）
 - `eventStore`：events 列表、createEvent(domain,type,ts,payload,source)
-- `analyticsStore`：看板所需的聚合视图（来自 events/goals 查询）
+- `analyticsStore`：看板所需的聚合视图（来自 events/goals 查询）；并消费 `analytics_events` 做三王漏斗基础聚合（见契约 §8，v1 前端本地算基础漏斗，Phase 3 转 `getFunnel` 云函数）
 - 持久化登录态到本地存储；未登录跳转 `/login`（路由守卫）
 
 ## 5. 路由与页面
 - `/login`：调用 `cloud.auth` 微信登录集成 → 存登录态
-- `/entry`：事件录入，按域切换表单（health/work/consumption/capability/interest），提交经 `cloud.rdb()` 或 `recordEvent`
-- `/dashboard`：经 `cloud.rdb()` 查 events + goals，渲染概览与近期记录
+- `/entry`：事件录入，按域切换表单（health/work/dating 三王），提交经 `cloud.rdb()` 或 `recordEvent`；dating 4 类热点（approach/date/chat/stage）按契约 §3
+- `/dashboard`：经 `cloud.rdb()` 查 events + goals，渲染三王评分总览 + 趋势 + AI 意见卡（generatePlan）
+- `/funnel`：增长漏斗看板（v1），读 `analytics_events` 渲染三王漏斗（黄毛王 获取→激活→留存→大结果→推荐；薄肌王 饮食→运动和睡眠→体脂→推荐；力王 工资→消费→留存→推荐）并高亮瓶颈步；分群维度 channel/region/user_type 见契约 §8
 - `/plans`：**v1 先做占位 UI**；真实数据等 Codex 的 `generatePlan`/`listPlans` 云函数交付后接入（门禁：未标"已实现"不接真实调用）
 
 ## 6. 表单校验（Zod）
-- `eventSchema` 镜像 `cloudbase-contract.md` 的 events 字段：`domain` enum（五域）、`ts` datetime、`payload` object（按 domain+type 子 schema）、`source` 默认 manual
+- `eventSchema` 镜像 `cloudbase-contract.md` 的 events 字段：`domain` enum（**三域 health/work/dating**）、`ts` datetime、`payload` object（按 domain+type 子 schema，dating=approach/date/chat/stage）、`source` 默认 manual
 - 录入页按 `domain+type` 动态渲染 `payload` 子字段并 Zod 校验（参考契约 §3 各域 type 与 payload 草案）
 - 提交前客户端校验（服务端校验/RLS 仍由 CloudBase 负责，前端不越界）
 
@@ -51,7 +52,9 @@
 - [ ] Taro 项目可编译微信小程序 + H5
 - [ ] 登录页真实走通 `cloud.auth` 微信登录拿登录态
 - [ ] 录入页按域填表、Zod 校验、经 `cloud.rdb()` 成功落库（RLS 隔离验证）
-- [ ] 看板页渲染概览与近期事件
+- [ ] 看板页渲染三王评分总览与近期事件
+- [ ] 漏斗看板页渲染三王漏斗与瓶颈步（读 `analytics_events`，契约 §8）
+- [ ] 打卡/分享等行为事件埋入 `analytics_events`（带 channel/region/user_type 分群维度）
 - [ ] /plans 占位 UI 完成（等云函数交付再接真实数据）
 - [ ] Vitest + Playwright 关键路径通过；TS strict 无错
 
