@@ -10,6 +10,13 @@
 ## 0. 元协议（必读）
 先读 `docs/agents/aurora-kb-protocol.md`：**Aurora KB = 本仓库 `docs/`，是你与后端（Codex）的唯一沟通通道，你们互不直连。**
 
+## 0.1 自治运行边界（PO 不在线自驱）
+- PO 已授权三 Agent（Tech Lead / 你 / Codex）**仅经 Aurora KB（`docs/`）自驱推进，无需 PO 在线协调**。
+- 契约已冻结（`cloudbase-contract.md` v1.4）：domain/type/payload、评分阈值、等级命名、generatePlan schema、analytics `step` 枚举均按文档直接做，**不空等 PO**。
+- 日常分歧由 **Tech Lead 裁决**（在 PR 描述写清，Tech Lead 在 checkpoint 审）；仅「产品范围 / 契约冻结项变更 / 上线合规」三类升级 PO（经 Tech Lead 批量转述）。
+- 每天至少一次 `git pull` 重读 `main` 上契约与 Codex 的 PR，防 stale 上下文（历史翻车根因）。
+- 你只 Own `frontend/`；与 Codex 不对话，一切经 KB（见 §5）。
+
 ## 1. 技术栈
 Taro 4（React + TypeScript, strict）· **CloudBase JS SDK v3**（`cloud.auth` / `cloud.rdb()`）· Ant Design Mobile · Zustand · React Router(Taro) · Zod · Vitest · Playwright
 

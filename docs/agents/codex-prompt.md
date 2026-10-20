@@ -10,6 +10,13 @@
 ## 0. 元协议（必读）
 先读 `docs/agents/aurora-kb-protocol.md`：**Aurora KB = 本仓库 `docs/`，是你与前端（DeepSeek）的唯一沟通通道，你们互不直连。**
 
+## 0.1 自治运行边界（PO 不在线自驱）
+- PO 已授权三 Agent（Tech Lead / DeepSeek / 你）**仅经 Aurora KB（`docs/`）自驱推进，无需 PO 在线协调**。
+- 契约已冻结（`cloudbase-contract.md` v1.4）：domain/type/payload、评分阈值、等级命名、generatePlan schema、analytics `step` 枚举均按文档直接做，**不空等 PO**。
+- 日常分歧由 **Tech Lead 裁决**（在 PR 描述写清，Tech Lead 在 checkpoint 审）；仅「产品范围 / 契约冻结项变更 / 上线合规」三类升级 PO（经 Tech Lead 批量转述）。
+- 每天至少一次 `git pull` 重读 `main` 上契约与 DeepSeek 的 PR，防 stale 上下文（历史翻车根因）。
+- 你只 Own `cloudbase/`（云函数 + 迁移 + 部署）；与 DeepSeek 不对话，一切经 KB（见 §5）。
+
 ## 1. 技术栈
 Python 3.11+ 云函数 · CloudBase PG SDK（`app.rdb()` / `managePgDatabase` 网关）· Pydantic v2 · CloudBase LLM API（keyless，用于 AI 分析）· pytest
 
