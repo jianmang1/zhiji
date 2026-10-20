@@ -1,10 +1,10 @@
-# 数据契约 v1.3（CloudBase 原生 · public schema）
+# 数据契约 v1.4（CloudBase 原生 · public schema）
 
 > 这是 **执己** 项目在 CloudBase 原生模型下的**唯一数据契约**（原则三）。
 > 取代原 `docs/api/openapi.yaml` 作为前端数据访问契约；openapi.yaml 降为可选 HTTP 云函数端点文档。
 > Codex（云函数）/ DeepSeek（前端 SDK）均以此文档为准，互不直连。
 >
-> **2026-10-20 更新（v1.3）**：新增 §8 增长漏斗分析层（`analytics_events` + `profiles` 表，**前向兼容**：v1 即建表，Phase 3 做计算；不改动已冻结的 domain payload / 评分 / LLM schema）。v1.2 冻结项（dating 4 类热点、评分阈值、等级命名、generatePlan schema）维持不变。
+> **2026-10-20 更新（v1.4）**：§8 `step` 字段改为**命名空间枚举**（`product.*`/`dating.*`/`health.*`/`work.*`，仅列 v1 步骤，Phase 3 留 TODO），支撑两层漏斗聚合；v1.3 的 §8 分析层（`analytics_events`+`profiles` 表，前向兼容）维持不变。v1.2 冻结项（dating 4 类热点、评分阈值、等级命名、generatePlan schema）维持不变。
 
 ## 1. 鉴权模型
 
@@ -133,8 +133,8 @@ LLM 产出的 `plans.content` 必须符合以下 JSON 结构（三王通用，Co
 |------|------|------|------|
 | id | bigint | PK, IDENTITY | |
 | user_id | uuid | NOT NULL | = auth.uid() |
-| name | text | NOT NULL | 行为名：`app_open`/`view_king`/`complete_checkin`/`share`/`stage_up`/`log_spending`/... |
-| step | text | | 漏斗步：`acquire`/`activate`/`retain`/`result`/`refer`（可选，用于 Phase 3 聚合） |
+| name | text | NOT NULL | 原始行为事件：`app_open`/`view_king`/`complete_checkin`/`share`/`reactivate`/`stage_up`/`log_spending`/`set_goal` |
+| step | text | | 漏斗步代码（命名空间枚举，见下）。v1 仅取下列值；Phase 3 扩展留 TODO |
 | domain | text | `CHECK IN ('health','work','dating')` | 关联王（可选） |
 | channel | text | | 获客渠道：`wechat_search`/`moments_ad`/`friend_share`/`organic` |
 | region | text | | 地域（省/市，可选） |
@@ -144,6 +144,14 @@ LLM 产出的 `plans.content` 必须符合以下 JSON 结构（三王通用，Co
 | ts | timestamptz | NOT NULL DEFAULT now() | |
 
 索引：`ix_analytics_user_ts(user_id, ts)`、`ix_analytics_name(name)`
+
+**`step` 命名空间枚举（v1，Phase 3 步骤留 TODO）**：
+- `product.acquire` / `product.activate` / `product.retain` / `product.habit` / `product.value` / `product.refer` / `product.reactive`
+- `dating.onboard` / `dating.approach` / `dating.response` / `dating.date` / `dating.stage_up` / `dating.stage5` / `dating.refer`
+- `health.onboard` / `health.water` / `health.sleep` / `health.workout` / `health.active_day` / `health.body_sense` / `health.refer`
+- `work.onboard` / `work.wage` / `work.spend` / `work.retain` / `work.refer`
+- *Phase 3 TODO（不在 v1 枚举）：`health.body_fat`/`health.in_band`、`work.save`/`work.grow`/`work.fin_health`*
+- `getFunnel` 据此 `step` 聚合两层漏斗；`name` 仅记录原始行为，`step` 才是漏斗归属。
 
 ### profiles（用户分群维度，v1 即建）
 | 字段 | 类型 | 约束 | 说明 |
@@ -162,7 +170,7 @@ LLM 产出的 `plans.content` 必须符合以下 JSON 结构（三王通用，Co
 
 ### 云函数（Phase 3 计算，v1 可仅存）
 - `trackAnalytics`：前端直接 `cloud.rdb()` 写 `analytics_events`（非敏感，受 RLS）；无需云函数。
-- `getFunnel(domain, range, segment?)`：聚合 `analytics_events` + `events` 成漏斗（各步转化率/drop-off/瓶颈步），按 `channel`/`region`/`user_type` 分群。Phase 3 实现，v1 前端看板可先拉原始事件本地算基础漏斗。
+- `getFunnel(domain, range, segment?)`：按 `step` 命名空间枚举（§8）聚合 `analytics_events` + `events` 成**两层漏斗**（产品级 `product.*` / 各王 `dating.*`/`health.*`/`work.*`），输出各步转化率/drop-off/瓶颈步，按 `channel`/`region`/`user_type` 分群。Phase 3 实现，v1 前端看板可先拉原始事件本地算基础漏斗。
 
 ### RLS
 `analytics_events` / `profiles` 同 §4：`ENABLE RLS`，策略 `USING (user_id = auth.uid())`；云函数(service_role) 可越权做分群聚合。
