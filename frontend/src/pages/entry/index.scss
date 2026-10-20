@@ -1,0 +1,130 @@
+.entry {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.entry__kings {
+  display: flex;
+  gap: 10px;
+}
+
+.entry__king {
+  flex: 1;
+  padding: 14px 0;
+  text-align: center;
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  font-size: 16px;
+  background: #ffffff;
+
+  &--active {
+    box-shadow: 4px 4px 0 var(--ink), inset 0 0 0 3px var(--ink);
+  }
+}
+
+.entry__panel,
+.entry__form {
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  background: #ffffff;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.entry__label {
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.entry__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.entry__chip {
+  padding: 8px 14px;
+  border: 2px solid var(--ink);
+  background: #ffffff;
+  font-size: 13px;
+  box-shadow: 3px 3px 0 var(--ink);
+
+  &--on {
+    color: var(--ink);
+  }
+}
+
+.entry__warn {
+  border: 3px solid var(--ink);
+  background: var(--warn);
+  box-shadow: 6px 6px 0 var(--ink);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.entry__warnTitle {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.entry__warnText {
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.entry__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.entry__fieldLabel {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.entry__input {
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  padding: 10px 12px;
+  font-size: 14px;
+  min-height: 20px;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.entry__error {
+  font-size: 12px;
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.entry__ok {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.entry__submit {
+  margin-top: 4px;
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 800;
+  height: 50px;
+  line-height: 50px;
+  border-radius: 0;
+
+  &[disabled] {
+    opacity: 0.45;
+  }
+}

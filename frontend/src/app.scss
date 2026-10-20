@@ -1,0 +1,18 @@
+/* 新粗野主义（Neo-Brutalism）全局 tokens —— 产品定义 §7 */
+page,
+body {
+  --ink: #000000;
+  --paper: #fff9e8;
+  --king-health: #39ff14;
+  --king-work: #ff6b00;
+  --king-dating: #ff2d95;
+  --muted: #5a5a5a;
+  --danger: #ff3b30;
+  --warn: #ffc400;
+
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+}

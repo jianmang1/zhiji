@@ -1,0 +1,6 @@
+node_modules/
+.swc/
+dist/
+coverage/
+*.log
+.temp/

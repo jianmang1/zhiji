@@ -1,0 +1,16 @@
+# pnpm 11 settings live here (the package.json "pnpm" field is deprecated for these).
+# G: is exFAT (no symlinks) -> flat node_modules is required.
+nodeLinker: hoisted
+
+# Taro's native binding ships prebuilt binaries; the remaining postinstall scripts are
+# optional (esbuild picks its platform binary at runtime). Do not fail installs over them.
+strictDepBuilds: false
+
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - '@swc/core'
+  - '@tarojs/binding'
+  - '@tarojs/cli'
+  - core-js
+  - core-js-pure
+  - esbuild

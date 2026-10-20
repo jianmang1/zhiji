@@ -1,0 +1,168 @@
+.funnel {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.funnel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.funnel__title {
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.funnel__btn {
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  background: #ffffff;
+  font-size: 12px;
+  border-radius: 0;
+}
+
+.funnel__note {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.funnel__segments {
+  border: 3px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
+  background: #ffffff;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.funnel__segLabel {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.funnel__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.funnel__chip {
+  border: 2px solid var(--ink);
+  padding: 4px 10px;
+  font-size: 11px;
+  background: #ffffff;
+
+  &--on {
+    background: var(--ink);
+    color: #ffffff;
+  }
+}
+
+.funnel__card {
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  background: #ffffff;
+}
+
+.funnel__cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 3px solid var(--ink);
+}
+
+.funnel__cardTitle {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.funnel__overall {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.funnel__steps {
+  display: flex;
+  flex-direction: column;
+}
+
+.funnel__step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--ink);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &--bottleneck {
+    background: #ffe3e0;
+    border-left: 6px solid var(--danger);
+  }
+}
+
+.funnel__stepMain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.funnel__stepIndex {
+  font-size: 10px;
+  border: 2px solid var(--ink);
+  padding: 0 5px;
+}
+
+.funnel__stepLabel {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.funnel__badge {
+  font-size: 10px;
+  background: var(--danger);
+  color: #ffffff;
+  padding: 1px 6px;
+  border: 2px solid var(--ink);
+  font-weight: 800;
+}
+
+.funnel__stepNums {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.funnel__count {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.funnel__conv {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.funnel__hint {
+  font-size: 11px;
+  padding: 8px 12px;
+  border-top: 2px dashed var(--ink);
+  font-weight: 700;
+}
+
+.funnel__foot {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.6;
+}

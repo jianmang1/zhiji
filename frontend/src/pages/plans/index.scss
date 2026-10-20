@@ -1,0 +1,67 @@
+.plans {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 16px;
+}
+
+.plans__card {
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  background: #ffffff;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.plans__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plans__title {
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.plans__badge {
+  font-size: 10px;
+  background: var(--warn);
+  border: 2px solid var(--ink);
+  padding: 1px 6px;
+  font-weight: 800;
+}
+
+.plans__text {
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.plans__subtitle {
+  font-size: 13px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+.plans__item {
+  display: flex;
+  gap: 6px;
+}
+
+.plans__dot {
+  font-size: 11px;
+}
+
+.plans__itemText {
+  flex: 1;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.plans__note {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 4px;
+}

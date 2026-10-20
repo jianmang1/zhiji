@@ -1,0 +1,87 @@
+.login {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 48px 20px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.login__brand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.login__title {
+  font-size: 44px;
+  font-weight: 900;
+  letter-spacing: 4px;
+}
+
+.login__slogan {
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+
+.login__kings {
+  display: flex;
+  gap: 8px;
+}
+
+.login__king {
+  flex: 1;
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 12px 0;
+  text-align: center;
+  font-size: 14px;
+}
+
+.login__card {
+  border: 3px solid var(--ink);
+  box-shadow: 8px 8px 0 var(--ink);
+  background: #ffffff;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.login__hint {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.login__warn {
+  font-size: 12px;
+  line-height: 1.6;
+  background: var(--warn);
+  border: 2px solid var(--ink);
+  padding: 8px 10px;
+}
+
+.login__button {
+  background: var(--ink);
+  color: #ffffff;
+  border: 3px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
+  font-size: 17px;
+  font-weight: 800;
+  height: 50px;
+  line-height: 50px;
+  border-radius: 0;
+}
+
+.login__error {
+  font-size: 12px;
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.login__env {
+  font-size: 10px;
+  color: var(--muted);
+}
