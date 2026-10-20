@@ -37,7 +37,7 @@
 
 - `docs/cloudbase-contract.md` = `public` 表 DDL、字段语义、RLS 策略、云函数签名 —— **新的唯一数据契约**。
 - `docs/api/openapi.yaml` 降为「可选 HTTP 云函数端点文档」，不再作为前端数据访问契约。
-- Codex（云函数）/ Gemini（前端 SDK）仍**互不直连**，仅对 KB 文档说话。
+- Codex（云函数）/ DeepSeek（前端 SDK）仍**互不直连**，仅对 KB 文档说话。
 
 ## 5. Codex Phase 1 后端处置
 

@@ -13,7 +13,7 @@
 
 ## 2. 前后端框架职责
 
-| 维度 | 前端（Gemini） | 后端（Codex） |
+| 维度 | 前端（DeepSeek） | 后端（Codex） |
 |------|----------------|---------------|
 | 框架 | Taro（React/TS）+ AntD Mobile + Zustand + React Router + Zod | Python + FastAPI + SQLAlchemy 2.0(async) + Alembic |
 | 负责 | 组件/UI 布局、状态管理、客户端路由、表单校验(Zod)、数据可视化(降级)、前端测试(Vitest/Playwright) | DB schema 与 migration、RESTful API、业务逻辑、数据访问层、单测/集成测试 |
@@ -37,7 +37,7 @@
    PostgreSQL(托管, JSONB)  ── 分析层(后续): networkx / SQL CTE → plans
         ▲
         │  Aurora KB = docs/ + api/openapi.yaml（前后端唯一契约源）
-   Codex ──────────────── Gemini（不直连，仅经 KB）
+   Codex ──────────────── DeepSeek（不直连，仅经 KB）
 ```
 
 - **认证**：微信 MP `wx.login` → `code` → 后端 `auth.code2session` 换 `openid` → 签发 JWT（access + refresh）。前端仅做登录 UI 与 token 存储。
@@ -74,7 +74,7 @@
 ## 6. Phase 拆分
 - **Phase 0（已完成）**：契约锁定 —— ADR-001、data-model-v1、architecture、openapi v1.0、职责提示词。
 - **Phase 1（Codex）**：后端骨架。项目初始化 → DB 连接(asyncpg/env) → Alembic → 微信 auth → events/goals/plans/analytics 接口 → 单测。验收：接口过契约、单测 ≥70%、migration 可回滚。
-- **Phase 2（Gemini）**：前端骨架。Taro 初始化 → 登录页 → events 录入页(按域) → 看板页 → Zod 校验 → 前端测试。验收：能录入并落库、看板渲染、类型安全。
+- **Phase 2（DeepSeek）**：前端骨架。Taro 初始化 → 登录页 → events 录入页(按域) → 看板页 → Zod 校验 → 前端测试。验收：能录入并落库、看板渲染、类型安全。
 - **Phase 3（我主持 weekly checkpoint）**：前后端联调、端到端关键路径测试、公网部署。验收：9 门禁全过。
 - **Phase 4（后续）**：分析层 —— 多 AI 分析产出 plans、图分析。
 - **Phase 5**：按反馈迭代（context/方向由 PO 风控）。

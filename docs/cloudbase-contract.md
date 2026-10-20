@@ -2,7 +2,7 @@
 
 > 这是 **执己** 项目在 CloudBase 原生模型下的**唯一数据契约**（原则三）。
 > 取代原 `docs/api/openapi.yaml` 作为前端数据访问契约；openapi.yaml 降为可选 HTTP 云函数端点文档。
-> Codex（云函数）/ Gemini（前端 SDK）均以此文档为准，互不直连。
+> Codex（云函数）/ DeepSeek（前端 SDK）均以此文档为准，互不直连。
 
 ## 1. 鉴权模型
 
@@ -95,4 +95,4 @@
 
 ## 7. 变更流程（质量门禁 8）
 
-任何表/字段/RLS/云函数签名变更：先写 ADR → 更新本文档 → `managePgDatabase applyMigration`（带回滚 SQL）→ 通知 Gemini 重读。
+任何表/字段/RLS/云函数签名变更：先写 ADR → 更新本文档 → `managePgDatabase applyMigration`（带回滚 SQL）→ 通知 DeepSeek 重读。

@@ -26,10 +26,10 @@
 ### 决议
 - **初始化 Git 仓库**（本提交）：Aurora KB 自此具备版本历史，Codex 可 `git pull` / 提 PR，契约变更可追溯。
 - **PostgreSQL 方案**：待 PO 拍板（本地 Docker / 托管云 / 暂以 CI 契约测试替代）。
-- **Gemini Phase 2 批准启动**：基于 `openapi.yaml` v1.0 生成 TS 客户端 + 四页面（登录/录入/看板/方案）；**真实 e2e 联调待 Codex 在 PG 验证后标 `x-status: implemented` 再碰**。
+- **DeepSeek Phase 2 批准启动**：基于 `openapi.yaml` v1.0 生成 TS 客户端 + 四页面（登录/录入/看板/方案）；**真实 e2e 联调待 Codex 在 PG 验证后标 `x-status: implemented` 再碰**。
 - **角色澄清（回应 Gemini「减中间人」）**：Aurora KB 已是前后端直接通道，我**不中转需求**；我的职责是 QC 门禁评审与契约冲突仲裁，不是传话。两 Agent 继续只对文档说话。
 
 ### 下一步
 - Codex：PG 到位后补跑集成测试 + 实跑 migration + 给已实现端点打 `x-status: implemented` + 提 PR。
-- Gemini：启动 Phase 2 前端骨架，client 由 openapi 生成；未标 implemented 的端点先留 UI 占位。
+- DeepSeek：启动 Phase 2 前端骨架，client 由 openapi 生成；未标 implemented 的端点先留 UI 占位。
 - Tech Lead：收 Codex PR 后做 Checkpoint #2 评审；并推动在 CI 加 openapi 契约漂移测试（schemathesis / openapi diff）固化门禁 1。

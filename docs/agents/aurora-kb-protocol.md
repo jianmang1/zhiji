@@ -1,7 +1,7 @@
 # Aurora KB · 前后端协作协议（元契约）
 
-> 本文件是"契约的契约"。它定义了执己项目里**后端逻辑 Agent（Codex）** 与 **前端 Agent（Gemini）** 如何通过文档协作，而不直接对话。
-> 它是启动会三项决议之一（协作方式），是两份职责提示词（`codex-prompt.md` / `gemini-prompt.md`）的上级协议。
+> 本文件是"契约的契约"。它定义了执己项目里**后端逻辑 Agent（Codex）** 与 **前端 Agent（DeepSeek）** 如何通过文档协作，而不直接对话。
+> 它是启动会三项决议之一（协作方式），是两份职责提示词（`codex-prompt.md` / `deepseek-prompt.md`）的上级协议。
 > 架构已转向 CloudBase 原生（见 `docs/ADR-002-cloudbase-native.md`）。
 
 ---
@@ -23,10 +23,10 @@
 
 | 文件 | Owner | Consumer | 说明 |
 |------|-------|----------|------|
-| `docs/cloudbase-contract.md` | **Codex** | Gemini | **唯一数据契约**：public 表 DDL / 字段语义 / RLS / 云函数签名。v1 起 Codex 维护；Gemini 只读并据其定义 TS 类型 |
-| `docs/data-model-v1.md` | Codex | Gemini | 原数据模型草案（事件溯源思路），已被 cloudbase-contract.md 吸收，保留作参考 |
+| `docs/cloudbase-contract.md` | **Codex** | DeepSeek | **唯一数据契约**：public 表 DDL / 字段语义 / RLS / 云函数签名。v1 起 Codex 维护；DeepSeek 只读并据其定义 TS 类型 |
+| `docs/data-model-v1.md` | Codex | DeepSeek | 原数据模型草案（事件溯源思路），已被 cloudbase-contract.md 吸收，保留作参考 |
 | `docs/backend-execution-plan.md` | Codex | Tech Lead | 后端（云函数）实现计划。Codex 维护 |
-| `docs/frontend-execution-plan.md` | Gemini | Tech Lead | 前端实现计划。Gemini 维护 |
+| `docs/frontend-execution-plan.md` | DeepSeek | Tech Lead | 前端实现计划。DeepSeek 维护 |
 | `docs/architecture.md` | Tech Lead | 双方 | 系统架构 / 部署 / 验收。双方遵守 |
 | `docs/ADR-001-tech-stack.md` | Tech Lead | 双方 | 原技术栈定案 + 9 质量门禁（部分被 ADR-002 覆盖） |
 | `docs/ADR-002-cloudbase-native.md` | Tech Lead | 双方 | **架构转向 CloudBase 原生决策**。双方遵守 |
@@ -40,7 +40,7 @@
 两 Agent 启动后的**第一动作**：`git pull` 到最新 `main`，按各自清单通读 KB，再写任何代码。
 
 - **Codex 启动必读**：`cloudbase-contract.md` → `backend-execution-plan.md` → `architecture.md` → `ADR-001-tech-stack.md` → `ADR-002-cloudbase-native.md` → 本文件
-- **Gemini 启动必读**：`cloudbase-contract.md` → `frontend-execution-plan.md` → `architecture.md` → `ADR-001-tech-stack.md` → `ADR-002-cloudbase-native.md` → 本文件
+- **DeepSeek 启动必读**：`cloudbase-contract.md` → `frontend-execution-plan.md` → `architecture.md` → `ADR-001-tech-stack.md` → `ADR-002-cloudbase-native.md` → 本文件
 
 > 提示：若 `cloudbase-contract.md` 与任意计划文档冲突，**以 `cloudbase-contract.md` 为准**（它是契约，不是说明文）。
 
@@ -50,7 +50,7 @@
 
 ### 4.1 谁可以写哪份文件
 - Codex 拥有 `cloudbase-contract.md`、`backend-execution-plan.md`。
-- Gemini 拥有 `frontend-execution-plan.md`。
+- DeepSeek 拥有 `frontend-execution-plan.md`。
 - `architecture.md`、`ADR-001/ADR-002`、`kickoff-meeting-notes.md` 由 **Tech Lead（Claude Code）** 拥有，Agent 只可提议、不可擅自改。
 
 ### 4.2 契约变更门禁（对齐质量门禁 8）
@@ -65,7 +65,7 @@
 ```
 # ADR-<序号>-<主题>
 - 状态：Proposed | Accepted | Rejected | Superseded
-- 提案方：Codex / Gemini / Tech Lead
+- 提案方：Codex / DeepSeek / Tech Lead
 - 日期：YYYY-MM-DD
 ## 背景
 ## 决策
@@ -80,7 +80,7 @@
 前后端不必对话，但要知道对方"到哪了"：
 
 - **后端就绪信号**：`cloudbase-contract.md` 中某表/云函数标注「已实现」（Codex 实现并自测通过后打标）。
-- **前端就绪信号**：Gemini 的 SDK 调用覆盖该表/字段，类型来自契约文档。
+- **前端就绪信号**：DeepSeek 的 SDK 调用覆盖该表/字段，类型来自契约文档。
 - **联调起点**：当某表/云函数双方都标就绪，进入 Phase 3 联调清单（见 `architecture.md` §6）。
 
 ---

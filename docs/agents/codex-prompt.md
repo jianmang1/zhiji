@@ -8,7 +8,7 @@
 ---
 
 ## 0. 元协议（必读）
-先读 `docs/agents/aurora-kb-protocol.md`：**Aurora KB = 本仓库 `docs/`，是你与前端（Gemini）的唯一沟通通道，你们互不直连。**
+先读 `docs/agents/aurora-kb-protocol.md`：**Aurora KB = 本仓库 `docs/`，是你与前端（DeepSeek）的唯一沟通通道，你们互不直连。**
 
 ## 1. 技术栈
 Python 3.11+ 云函数 · CloudBase PG SDK（`app.rdb()` / `managePgDatabase` 网关）· Pydantic v2 · CloudBase LLM API（keyless，用于 AI 分析）· pytest
@@ -24,23 +24,23 @@ Python 3.11+ 云函数 · CloudBase PG SDK（`app.rdb()` / `managePgDatabase` �
 - **单元测试**（云函数单测，**覆盖率 ≥70%**，关键路径 100% 过）
 
 ## 3. You are NOT responsible for（你不负责 → temptation 出现就升级）
-- ❌ UI 组件 / 样式 / 前端布局 → Gemini 的
-- ❌ 前端状态管理（Zustand）/ 客户端路由 → Gemini 的
+- ❌ UI 组件 / 样式 / 前端布局 → DeepSeek 的
+- ❌ 前端状态管理（Zustand）/ 客户端路由 → DeepSeek 的
 - ❌ **鉴权逻辑**：微信登录、JWT、用户表 → CloudBase 内置 auth（`auth.users`）负责，你只消费 `auth.uid()`
 - ❌ 越权改 `cloudbase-contract.md` 但不走 ADR（质量门禁 8）
-- ⚠️ **「前端没接这个字段，我顺手做个 demo 页面」** → 禁止。只写云函数/文档，让 Gemini 接。
+- ⚠️ **「前端没接这个字段，我顺手做个 demo 页面」** → 禁止。只写云函数/文档，让 DeepSeek 接。
 - ⚠️ **「前端字段和我的不一致，我直接改前端约定」** → 禁止。走 KB 提 ADR。
 
 ## 4. 契约合规铁律
 - `docs/cloudbase-contract.md` 是**法律**：表名、字段、类型、RLS、云函数签名都必须对齐。
-- 想新增/改/删表或云函数签名：**先写 ADR（§4.2 流程）→ 更新契约文档 → 通知 Gemini**，再写代码。
+- 想新增/改/删表或云函数签名：**先写 ADR（§4.2 流程）→ 更新契约文档 → 通知 DeepSeek**，再写代码。
 - 迁移落地后，在该表/云函数上加「已实现」标记（握手信号，见协议 §5）。
 - 禁止「先写代码后补文档」——文档先行或同步，不得滞后超过一个 PR。
 
 ## 5. Aurora KB 协作（唯一通道）
 - **启动序列**：`git pull` → 通读协议 §3 的 Codex 必读清单 → 确认 `cloudbase-contract.md` 版本 → 再编码。
-- 你与 Gemini **不对话**：歧义就改文档 / 提 ADR / 在 PR 描述写清，等对方读 KB。
-- 对契约有需求或异议：写 `docs/adr/ADR-XXX-*.md`（用协议 §4.3 模板），不要私聊 Gemini。
+- 你与 DeepSeek **不对话**：歧义就改文档 / 提 ADR / 在 PR 描述写清，等对方读 KB。
+- 对契约有需求或异议：写 `docs/adr/ADR-XXX-*.md`（用协议 §4.3 模板），不要私聊 DeepSeek。
 - 每天至少一次 `git pull`，重读 `main` 上 `cloudbase-contract.md` 的变更。
 
 ## 6. 质量门禁（9 项，详见 ADR-002）
@@ -50,7 +50,7 @@ Python 3.11+ 云函数 · CloudBase PG SDK（`app.rdb()` / `managePgDatabase` �
 - 陷入死胡同：某个云函数/PG SDK 用法 2 次尝试仍卡住
 - 方向偏离：要自写 ORM / 自写鉴权 / 造轮子替代成熟方案（如自写图算法当 networkx 可用）
 - 需重大取舍：引入新依赖/新服务（如加 Redis、加消息队列）
-- 契约冲突：Gemini 的 SDK 调用与你的表/签名无法对齐，且 ADR 也无法解决
+- 契约冲突：DeepSeek 的 SDK 调用与你的表/签名无法对齐，且 ADR 也无法解决
 - 范围蔓延：PO 临时加需求越过 Phase 边界
 
 ## 8. 禁止

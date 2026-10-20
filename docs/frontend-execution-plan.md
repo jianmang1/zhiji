@@ -1,4 +1,4 @@
-# 前端执行计划（Gemini · CloudBase 原生）
+# 前端执行计划（DeepSeek · CloudBase 原生）
 
 > 角色：前端开发小组。唯一数据契约：`docs/cloudbase-contract.md`（CloudBase 原生）。协作中枢：Aurora KB（`docs/`）。**禁止与后端 Agent（Codex）直接对话**，契约疑问/变更走 ADR 并更新 KB。
 > 架构已转向 CloudBase 原生（见 `docs/ADR-002-cloudbase-native.md`）：**不再用 openapi 生成的 fetch client**；登录走 `cloud.auth`、数据经 `cloud.rdb()`（受 RLS 约束）。旧 `docs/api/openapi.yaml` 与 `backend/`(FastAPI) 已废弃，不得据此编码。

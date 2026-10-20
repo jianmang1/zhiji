@@ -70,11 +70,11 @@ pytest -q
 - 复核 openapi 端点 `x-status` 与代码一致（门禁 1）
 - 合并 PR、打 tag `phase1-verified`
 - 更新 `docs/integration-checkpoints.md`
-- 通知 Gemini：后端契约已冻结可联调
+- 通知 DeepSeek：后端契约已冻结可联调
 
 ---
 
 ## 备选方案（如本机起 PG 仍有困难）
 
-- **B. 暂跳过真实 PG**：先加 openapi 契约漂移自动检查（schemathesis/prance diff）固化门禁 1，集成测试推迟到部署阶段（Codex 亦曾建议）。Gemini 可立即并行联调 mock。
+- **B. 暂跳过真实 PG**：先加 openapi 契约漂移自动检查（schemathesis/prance diff）固化门禁 1，集成测试推迟到部署阶段（Codex 亦曾建议）。DeepSeek 可立即并行联调 mock。
 - **C. SQLite 冒烟**（不推荐）：需 Codex 改驱动/JSONB 以适配 async SQLite，偏离真实部署形态，违反契约优先原则。

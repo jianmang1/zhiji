@@ -8,7 +8,7 @@
 
 | 维度 | 决策 | 备注 |
 |------|------|------|
-| 前端框架 | Taro（React 语法）+ 编译到微信小程序 / H5 | 保住 Gemini 的 React/TS 技能栈，真小程序形态 |
+| 前端框架 | Taro（React 语法）+ 编译到微信小程序 / H5 | 保住 DeepSeek 的 React/TS 技能栈，真小程序形态 |
 | 前端 UI | Ant Design Mobile（或 Taro UI） | 小程序内 AntD 桌面版不可用，需移动组件库 |
 | 状态管理 | Zustand | 按原定位 |
 | 客户端路由 | React Router（Taro 适配） | 按原定位 |
@@ -27,7 +27,7 @@
 
 - **Codex（后端）负责**：DB schema 与 migration；RESTful API；业务逻辑；数据访问层；单测/集成测试。
   **不负责**：UI 组件/样式、前端状态、客户端路由、浏览器兼容。
-- **Gemini（前端）负责**：Taro 组件与布局；Zustand 状态；路由；数据可视化；Zod 校验；前端测试。
+- **DeepSeek（前端）负责**：Taro 组件与布局；Zustand 状态；路由；数据可视化；Zod 校验；前端测试。
   **不负责**：DB 查询/schema、API 端点实现、服务端校验、认证逻辑（仅 UI 集成）。
 - **我（四合一）负责**：执行计划、周集成 checkpoint、技术栈选型、DB 设计、API 合约、ADR、9 门禁评审、异常救火。
 - **PO 负责**：业务需求、功能优先级、验收、全局方向、冲突裁决、技术方案接受/拒绝、context 与进度风控。
@@ -60,7 +60,7 @@ v1 用 PostgreSQL + JSONB 存关系边表；环路/多跳分析用 networkx 或 
 
 ## 6. 备选方案（Considered Alternatives）
 
-- 微信原生 WXML/WXSS：弃——浪费 Gemini 的 React 栈，需重写前端定位。
+- 微信原生 WXML/WXSS：弃——浪费 DeepSeek 的 React 栈，需重写前端定位。
 - 纯 H5 网页：弃——开发快但非真小程序形态，与"小程序"目标不符。
 - 直接 Neo4j：暂缓——运维重，单用户早期偏过度工程。
 - 全栈跳过契约直接并行：弃——违反原则三，内耗风险高。
