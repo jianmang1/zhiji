@@ -1,5 +1,7 @@
 # 后端执行计划（Codex）
 
+> 本文记录的是旧 FastAPI 后端方案。架构已由 ADR-002 转为 CloudBase 原生；当前云函数实现和部署说明见 `cloudbase/README.md`，接口与数据以 `cloudbase-contract.md` 为准。本文仅供迁移参考。
+
 > 角色：后端开发小组。唯一接口契约：`docs/api/openapi.yaml`（v1.0）。唯一数据契约：`docs/data-model-v1.md`。协作中枢：Aurora KB（`docs/`）。**禁止与前端 Agent 直接对话**，契约疑问/变更走 ADR 并更新 KB。
 
 ## 1. 技术栈

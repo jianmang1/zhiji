@@ -80,13 +80,13 @@
 
 | 函数 | 入参 | 行为 | 返回 |
 |------|------|------|------|
-| `recordEvent` | payload（domain,type,ts,payload,source） | 注入 user_id=auth.uid() 插入 events | 新事件 id |
-| `listEvents` | domain?, range? | 按当前用户查 events（+tags） | 事件列表 |
+| `recordEvent` | payload（domain,type,ts,payload,source） | 注入 user_id=auth.uid() 插入 events | 新事件 id | 本地已实现并通过单元测试；待云端联调 |
+| `listEvents` | domain?, range? | 按当前用户查 events（+tags） | 事件列表 | 本地已实现并通过单元测试；待云端联调 |
 | `upsertGoal` / `listGoals` | goal 字段 / — | 目标增查（带 user_id） | 目标 |
-| `generatePlan` | based_on（查询范围） | 调 LLM 分析 → 写 plans（generated_by 记模型） | 新方案 id |
+| `generatePlan` | based_on（查询范围） | 调 LLM 分析 → 写 plans（generated_by 记模型） | 新方案 id | 本地已实现并通过单元测试；待云端联调 |
 | `listPlans` | — | 按当前用户查 plans | 方案列表 |
 
-> 高频录入/查询可由前端直接 `cloud.rdb()` 完成（受 RLS）；复杂聚合与 AI 分析走云函数。
+> 非敏感数据的高频读写可由前端直接 `cloud.rdb()` 完成（受 RLS）。**health/consumption 事件必须通过 `recordEvent` 写入、通过 `listEvents` 读取**，由云函数负责加密和解密 payload；不得由客户端直接写入或读取敏感事件 payload。复杂聚合与 AI 分析走云函数。
 
 ## 6. 图分析（环路检测等）
 
