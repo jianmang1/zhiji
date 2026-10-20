@@ -1,5 +1,7 @@
 # 执己 · 项目启动会纪要（四方对齐）
 
+> ⚠️ **v1 已过期**：本纪要记录的是 Gemini + openapi/FastAPI 旧栈的初始对齐。架构已 pivot 到 CloudBase 原生、前端 Agent 已切换为 DeepSeek，请以 **`docs/four-party-alignment-20261020.md`（v2 重对齐章程）** 为当前事实源。本文件保留作历史。
+
 - 时间：2026-10-19
 - 参与者：产品负责人（PO）／ Claude Code（我，PM+架构+QC+Tech Lead）／ Codex（后端 Agent）／ Gemini（前端 Agent）
 - 目标：技术细节打通（数据库连接、认证、部署）；明确 OpenAPI 协作方式；通过职责提示词锁死 Agent 边界
