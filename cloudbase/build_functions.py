@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-FUNCTIONS = ("recordEvent", "listEvents", "generatePlan")
+FUNCTIONS = ("recordEvent", "listEvents", "generatePlan", "getFunnel")
 
 
 def main() -> int:
@@ -28,6 +28,31 @@ def main() -> int:
         shutil.rmtree(target_root)
     target_root.mkdir(parents=True)
 
+    dependency_bundle = target_root / "_third_party"
+    if not args.skip_deps:
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "--disable-pip-version-check",
+                "--timeout=60",
+                "--retries=5",
+                "--only-binary=:all:",
+                "--index-url=https://pypi.org/simple",
+                "--platform=manylinux2014_x86_64",
+                "--python-version=3.11",
+                "--implementation=cp",
+                "--abi=cp311",
+                "--target",
+                str(dependency_bundle),
+                "-r",
+                str(ROOT / "requirements.txt"),
+            ],
+            check=True,
+        )
+
     for name in FUNCTIONS:
         destination = target_root / name
         destination.mkdir()
@@ -44,26 +69,14 @@ def main() -> int:
         )
         shutil.copy2(ROOT / "requirements.txt", destination / "requirements.txt")
         if not args.skip_deps:
-            subprocess.run(
-                [
-                    sys.executable,
-                    "-m",
-                    "pip",
-                    "install",
-                    "--disable-pip-version-check",
-                    "--only-binary=:all:",
-                    "--platform=manylinux2014_x86_64",
-                    "--python-version=3.11",
-                    "--implementation=cp",
-                    "--abi=cp311",
-                    "--target",
-                    str(destination / "third_party"),
-                    "-r",
-                    str(ROOT / "requirements.txt"),
-                ],
-                check=True,
+            shutil.copytree(
+                dependency_bundle,
+                destination / "third_party",
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
             )
         print(f"Prepared {destination}")
+    if dependency_bundle.exists():
+        shutil.rmtree(dependency_bundle)
     return 0
 
 

@@ -4,6 +4,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 Domain = Literal["health", "work", "dating"]
+FunnelDomain = Literal["health", "work", "dating", "product"]
 
 
 class EventInput(BaseModel):
@@ -67,8 +68,45 @@ class GeneratePlanInput(BaseModel):
         )
         if set(value) - {"domain", "range"}:
             raise ValueError("based_on supports only domain and range filters")
+        if not value.get("domain"):
+            raise ValueError("based_on.domain is required to score a plan")
         if value.get("domain") and list_input.domain is None:
             raise ValueError("based_on.domain is invalid")
         if value.get("range") is not None and list_input.range is None:
             raise ValueError("based_on.range is invalid")
+        return value
+
+
+class FunnelSegment(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    channel: str | None = Field(default=None, min_length=1, max_length=128)
+    region: str | None = Field(default=None, min_length=1, max_length=128)
+    user_type: str | None = Field(default=None, min_length=1, max_length=32)
+
+
+class GetFunnelInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    domain: FunnelDomain = "product"
+    range: dict[str, Any]
+    segment: FunnelSegment | None = None
+
+    @field_validator("range")
+    @classmethod
+    def validate_required_range(cls, value: dict[str, Any]) -> dict[str, Any]:
+        if not isinstance(value, dict) or not {"from", "to"} <= value.keys():
+            raise ValueError("range.from and range.to are required")
+        if set(value) - {"from", "to"}:
+            raise ValueError("range supports only from and to")
+        ListEventsInput.validate_range(value)
+        if value["from"] is None or value["to"] is None:
+            raise ValueError("range.from and range.to are required")
+        return value
+
+    @field_validator("segment")
+    @classmethod
+    def validate_nonempty_segment(
+        cls, value: FunnelSegment | None
+    ) -> FunnelSegment | None:
+        if value is not None and not any(value.model_dump().values()):
+            raise ValueError("segment must include at least one dimension")
         return value

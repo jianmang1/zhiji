@@ -1,5 +1,6 @@
 import base64
 import json
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import httpx
@@ -17,6 +18,7 @@ from zhiji_cloudbase.encryption import decrypt_payload, encrypt_payload
 from zhiji_cloudbase.gateway import CloudBaseError, CloudBaseGateway
 from zhiji_cloudbase.handlers import dispatch
 from zhiji_cloudbase.http_function import parse_request_body
+from zhiji_cloudbase.score_engine import score_domain
 from zhiji_cloudbase.validation import ListEventsInput, parse_time
 
 
@@ -35,6 +37,7 @@ class FakeGateway:
         self.token = token
         self.rows: list[dict] = []
         self.filters: dict | None = None
+        self.filter_history: list[dict] = []
         self.chat_messages: list[dict] | None = None
         self.chat_response = {
             "model": "hy3",
@@ -43,17 +46,28 @@ class FakeGateway:
                     "message": {
                         "content": json.dumps(
                             {
-                                "title": "Build a steadier sleep routine",
-                                "content": {
-                                    "summary": "Small, consistent changes",
-                                    "actions": [],
-                                },
+                                "summary": "Small, consistent changes",
+                                "actions": [
+                                    {
+                                        "title": "Plan sleep",
+                                        "why": "Build a routine",
+                                        "effort": "mid",
+                                    },
+                                    {
+                                        "title": "Set bedtime",
+                                        "why": "Start small",
+                                        "effort": "low",
+                                    },
+                                ],
+                                "next_milestone": "Reach seven hours most nights",
                             }
                         )
                     }
                 }
             ],
         }
+        self.analytics_rows: list[dict] = []
+        self.profile: dict = {}
 
     def __enter__(self):
         return self
@@ -71,12 +85,20 @@ class FakeGateway:
 
     def list_events(self, filters):
         self.filters = filters
+        self.filter_history.append(filters)
         return list(self.rows)
 
     def complete_chat(self, model, messages):
         self.chat_messages = messages
         assert model
         return self.chat_response
+
+    def list_analytics_events(self, domain, date_range):
+        self.analytics_query = (domain, date_range)
+        return list(self.analytics_rows)
+
+    def get_profile(self):
+        return self.profile
 
 
 @pytest.fixture(autouse=True)
@@ -96,6 +118,42 @@ def test_sensitive_event_payload_is_encrypted_and_round_trips():
 def test_non_sensitive_event_payload_remains_json():
     payload = {"project": "alpha"}
     assert encrypt_payload("work", payload) == payload
+
+
+def test_score_engine_mirrors_frozen_weekly_thresholds_and_tiers():
+    now = datetime(2026, 10, 20, tzinfo=UTC)
+    events = [
+        {
+            "domain": "health",
+            "type": "water",
+            "payload": {"ml": 2000},
+            "ts": "2026-10-19T00:00:00Z",
+        },
+        {
+            "domain": "health",
+            "type": "sleep",
+            "payload": {"duration_h": 49},
+            "ts": "2026-10-19T00:00:00Z",
+        },
+        {
+            "domain": "health",
+            "type": "workout",
+            "payload": {"duration_min": 210},
+            "ts": "2026-10-19T00:00:00Z",
+        },
+        {
+            "domain": "health",
+            "type": "water",
+            "payload": {"ml": 5000},
+            "ts": "2026-10-01T00:00:00Z",
+        },
+    ]
+    assert score_domain("health", events, now) == {
+        "domain": "health",
+        "score": 100,
+        "tier": "最强王者",
+        "event_count": 3,
+    }
 
 
 def test_config_reads_runtime_values_and_has_safe_defaults(monkeypatch):
@@ -204,6 +262,38 @@ def test_gateway_calls_cloudbase_model_endpoint():
     assert result == {"choices": []}
     assert seen[0].url.path == "/v1/ai/cloudbase/chat/completions"
     assert seen[0].headers["Authorization"] == "Bearer user-token"
+
+
+def test_gateway_queries_analytics_and_profile_with_callers_token():
+    seen = []
+
+    def responder(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        if request.url.path.endswith("/profiles"):
+            return httpx.Response(200, json=[{"region": "Shanghai"}])
+        return httpx.Response(200, json=[])
+
+    client = httpx.Client(transport=httpx.MockTransport(responder))
+    with CloudBaseGateway("user-token", client) as gateway:
+        assert (
+            gateway.list_analytics_events(
+                "health", {"from": "2026-10-01T00:00:00Z", "to": "2026-10-20T00:00:00Z"}
+            )
+            == []
+        )
+        assert gateway.get_profile() == {"region": "Shanghai"}
+    client.close()
+    assert all(
+        request.headers["Authorization"] == "Bearer user-token" for request in seen
+    )
+    analytics = seen[0]
+    assert analytics.url.path == "/v1/rdb/rest/analytics_events"
+    assert analytics.url.params["domain"] == "eq.health"
+    assert analytics.url.params["step"].startswith("in.(health.onboard,")
+    assert analytics.url.params.get_list("ts") == [
+        "gte.2026-10-01T00:00:00Z",
+        "lte.2026-10-20T00:00:00Z",
+    ]
 
 
 def test_gateway_sanitizes_upstream_http_errors():
@@ -330,16 +420,20 @@ def test_generate_plan_analyzes_scoped_events_and_persists_traceability():
     )
     assert status == 201
     assert response["id"] == "6b184343-7b59-4d70-9e42-7ac2082f04d0"
-    assert gateway.filters == {
+    assert gateway.filter_history[0] == {
         "limit": 200,
         "domain": "health",
         "range": {"from": "2026-10-01T00:00:00Z", "to": "2026-10-20T23:59:00Z"},
     }
+    assert gateway.filters["domain"] == "health"
     plan = gateway.rows[-1]
     assert plan["generated_by"] == "hy3"
     assert plan["based_on"]["event_ids"] == [7]
     assert plan["based_on"]["event_count"] == 1
     assert plan["content"]["summary"] == "Small, consistent changes"
+    assert plan["content"]["domain"] == "health"
+    assert plan["content"]["tier"] == "倔强青铜"
+    assert [action["effort"] for action in plan["content"]["actions"]] == ["low", "mid"]
     assert '"duration":6' in gateway.chat_messages[1]["content"]
 
 
@@ -352,3 +446,108 @@ def test_generate_plan_rejects_unsupported_filters():
     )
     assert status == 400
     assert error["code"] == "bad_request"
+
+
+def test_generate_plan_rejects_invalid_model_schema_without_persisting():
+    gateway = FakeGateway(make_token())
+    gateway.chat_response["choices"][0]["message"]["content"] = json.dumps(
+        {
+            "summary": "Short plan",
+            "actions": [{"title": "Only one", "why": "Start", "effort": "low"}],
+            "next_milestone": "Next week",
+        }
+    )
+    status, error = dispatch(
+        "generatePlan",
+        {"based_on": {"domain": "health"}},
+        auth_headers(gateway.token),
+        gateway_factory=lambda _token: gateway,
+    )
+    assert status == 502
+    assert error["code"] == "upstream_error"
+    assert not gateway.rows
+    status, error = dispatch(
+        "generatePlan",
+        {
+            "based_on": {
+                "range": {"from": "2026-10-01T00:00:00Z", "to": "2026-10-20T00:00:00Z"}
+            }
+        },
+        auth_headers(),
+        gateway_factory=FakeGateway,
+    )
+    assert status == 400
+    assert error["code"] == "bad_request"
+
+
+def test_get_funnel_counts_ordered_steps_and_separates_reactivation():
+    token = make_token()
+    gateway = FakeGateway(token)
+    gateway.analytics_rows = [
+        {"step": "product.acquire", "channel": "organic"},
+        {"step": "product.acquire", "channel": "organic"},
+        {"step": "product.activate", "channel": "organic"},
+        {"step": "product.retain", "channel": "organic"},
+        {"step": "product.reactive", "channel": "organic"},
+        {"step": "health.water", "channel": "organic"},
+    ]
+    status, result = dispatch(
+        "getFunnel",
+        {"range": {"from": "2026-10-01T00:00:00Z", "to": "2026-10-20T23:59:59Z"}},
+        auth_headers(token),
+        gateway_factory=lambda received: gateway,
+    )
+    assert status == 200
+    assert result["steps"][0] == {
+        "step": "product.acquire",
+        "count": 2,
+        "conv_rate": 1.0,
+        "drop_off": 0.0,
+    }
+    assert result["steps"][1]["conv_rate"] == 0.5
+    assert result["bottleneck_step"] == "product.habit"
+    assert result["steps"][-1] == {
+        "step": "product.reactive",
+        "count": 1,
+        "conv_rate": None,
+        "drop_off": None,
+    }
+    assert gateway.analytics_query[0] == "product"
+
+
+def test_get_funnel_filters_segment_using_profile_fallback():
+    gateway = FakeGateway(make_token())
+    gateway.profile = {"region": "Shanghai", "user_type": "new"}
+    gateway.analytics_rows = [
+        {"step": "health.onboard", "region": None, "user_type": None},
+        {"step": "health.water", "region": "Beijing", "user_type": "new"},
+    ]
+    status, result = dispatch(
+        "getFunnel",
+        {
+            "domain": "health",
+            "range": {"from": "2026-10-01T00:00:00Z", "to": "2026-10-20T23:59:59Z"},
+            "segment": {"region": "Shanghai", "user_type": "new"},
+        },
+        auth_headers(gateway.token),
+        gateway_factory=lambda _token: gateway,
+    )
+    assert status == 200
+    assert result["steps"][0]["count"] == 1
+    assert result["steps"][1]["count"] == 0
+    assert result["segment"] == {"region": "Shanghai", "user_type": "new"}
+
+
+def test_get_funnel_requires_timezone_range_and_valid_segment():
+    for body in (
+        {},
+        {"range": {"from": "2026-10-01T00:00:00", "to": "2026-10-20T00:00:00Z"}},
+        {
+            "range": {"from": "2026-10-01T00:00:00Z", "to": "2026-10-20T00:00:00Z"},
+            "segment": {},
+        },
+    ):
+        status, _ = dispatch(
+            "getFunnel", body, auth_headers(), gateway_factory=FakeGateway
+        )
+        assert status == 400

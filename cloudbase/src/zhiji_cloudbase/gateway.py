@@ -105,6 +105,50 @@ class CloudBaseGateway:
             raise CloudBaseError("CloudBase did not return the new plan id")
         return result[0]["id"]
 
+    def list_analytics_events(
+        self, domain: str, date_range: dict[str, str]
+    ) -> list[dict[str, Any]]:
+        from zhiji_cloudbase.funnel import DOMAIN_STEPS, PRODUCT_STEPS
+
+        steps = PRODUCT_STEPS if domain == "product" else DOMAIN_STEPS[domain]
+        step_filter = "(" + ",".join(steps) + ")"
+        rows: list[dict[str, Any]] = []
+        page_size = 1000
+        offset = 0
+        while True:
+            params = [
+                ("select", "step,domain,channel,region,user_type,ts"),
+                ("step", f"in.{step_filter}"),
+                ("ts", f"gte.{date_range['from']}"),
+                ("ts", f"lte.{date_range['to']}"),
+                ("order", "ts.asc"),
+                ("limit", str(page_size)),
+                ("offset", str(offset)),
+            ]
+            if domain != "product":
+                params.append(("domain", f"eq.{domain}"))
+            result = self._request(
+                "GET", "/v1/rdb/rest/analytics_events", params=params
+            )
+            if not isinstance(result, list):
+                raise CloudBaseError("CloudBase returned an invalid analytics list")
+            rows.extend(result)
+            if len(result) < page_size:
+                return rows
+            offset += page_size
+
+    def get_profile(self) -> dict[str, Any]:
+        result = self._request(
+            "GET",
+            "/v1/rdb/rest/profiles",
+            params=[("select", "region,user_type,acquire_channel"), ("limit", "1")],
+        )
+        if not isinstance(result, list) or not result:
+            return {}
+        if not isinstance(result[0], dict):
+            raise CloudBaseError("CloudBase returned an invalid profile")
+        return result[0]
+
     def complete_chat(
         self, model: str, messages: list[dict[str, str]]
     ) -> dict[str, Any]:
