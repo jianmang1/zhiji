@@ -128,4 +128,4 @@ CloudBase Python 3.11 四个 HTTP 云函数已修复 Layer 导入路径并部署
 ### 部署配置注意项
 
 - 本轮重部署后 `TCB_ENV_ID` 已显式设为当前 CloudBase 环境，避免未解析变量导致函数 500。
-- **待恢复密钥**：部署详情确认 `FERNET_ENCRYPTION_KEY` 当前为空；本地无可恢复的原 Fernet 密钥。work 域 E2E 不依赖该值，但 health/dating 写入加密会失败，故本轮没有对敏感域做写入复测，也没有生成新密钥以免使历史密文不可读。需环境负责人在 CloudBase 函数环境变量中恢复原密钥，再部署/验证 `recordEvent` 与 `listEvents` 的 health/dating 闭环。
+- **FERNET 密钥恢复（2026-10-21，CloudBase 控制台核对）**：环境负责人已恢复原密钥；控制台环境变量表确认 `recordEvent`、`listEvents`、`generatePlan` 均配置了 `FERNET_ENCRYPTION_KEY`。为避免泄露，检查点不记录密钥值。该核对只证明函数配置项已存在；恢复后的 health/dating 加密写入、读取与解密 E2E 尚未复测，需取得应用侧测试用户登录态（CloudBase access token）后补录状态码、脱敏响应和耗时。腾讯云控制台登录态本身不能替代该用户 token。此前的工作域 smoke 不依赖 Fernet 密钥。

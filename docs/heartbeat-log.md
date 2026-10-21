@@ -461,3 +461,56 @@ PO 裁定 **ADR-005 = A**（约束已解除，立即实现）。契约已由 Tec
 
 ### 7. 本轮结论
 PR#9 已合并 main(`84fce6b`)，Codex 后端 Phase3（A1/A3/A4/A5/A6）全部入主，硬门禁通过。Codex 后端工作至此闭环（恢复分支仅留 KB 文档待入库）。待 PO：FERNET 密钥恢复 + ADR-006 隐私拍板 + KB 入库批准。待办清单见 `docs/po-action-items.md`（第 10 轮）。
+
+---
+
+## 第 11 轮 · 2026-10-21T16:51+08:00（Tech Lead 自主心跳 · 远端核验 + 刷新）
+
+### 1. 事实核对（git 远端，防虚报）
+- `git fetch origin` 成功；`origin/main = bd2155a`（较第 10 轮 `84fce6b` 前进 2 提交：PR#10 `docs/privacy-kb-approval`）。
+- 本地 `main` 干净（status 空），`git merge --ff-only origin/main` → `bd2155a`（纯 ff、无推送、无冲突）。
+- 全部 PR#1–#10 经 `merge-base --is-ancestor` 核验 **均已合入 main**：`refs/pull/{1..10}/head` 的 tip 均为 main 祖先 → **当前无 OPEN PR**。
+
+### 2. 状态收敛核验
+- **A 类全闭环**：A1–A6（Codex，PR#9）、A2/A7/A8 + plans/diagnostics/body_sense（DeepSeek，PR#4/#6/#7/#8）全部入 main。
+- **B 类全闭环**：B1–B4（PO 已裁决）、B5（ADR-005 采纳 A，随 PR#8 落地）；ADR-006 PO 隐私裁定（本期不开放跨用户 cohort）经 PR#10 落盘；KB 指令文档经 PR#10 持久化入 main（此前隔离于 `recover/techlead-quarantine-20261021`，现该分支已无独立 KB 待入库内容，可弃用）。
+- **Codex PR#9 证据诚实度复核（沿用第 10 轮审查，无新增疑点）**：checkpoint 记录真实响应 ID（`{"id":5/6}`、`c7aaf216…`、`26c9ace5…`）、真实 HTTP 码（201/200/204/401）、真实实测耗时（getFunnel 738ms、降级 703ms、正常 AI 16153ms、recordEvent 801ms、listEvents 501ms）；CLS 现已可查；A6 强制 Bearer（401 实测）。`FERNET_ENCRYPTION_KEY` 为空 → health/dating 加密写入未复测一项**诚实标出**，未伪造。
+
+### 3. 自治推进评估
+- 可达标且无需 CloudBase 的 A 类已全部合并；无新 A 项。
+- 需 CloudBase 凭证项（A1–A6）已完成并合 main，仅余「密钥恢复后复测 health/dating」属 🟡 待凭证。
+- B 类无新增；无新 directive/checkpoint 文件需处理。
+
+### 4. 结论 / 下一步
+- **本轮无新活可自治推进**（git 状态收敛于 bd2155a；standing items 不变）。
+- 唯一未闭环：**🔴 CloudBase 函数环境变量恢复原始 `FERNET_ENCRYPTION_KEY`**（需环境负责人/PO 登录 CloudBase 控制台回写；Agent 无凭证）→ 之后 **🟡 唤醒 Codex 复测 health/dating 敏感域加密闭环**。
+- 🟢 DeepSeek 无任何待办。
+- 持续 `git fetch` 核对；B 类无新增则下轮仍仅记「无新活」。
+
+---
+
+## 第 12 轮 · 2026-10-21T17:21+08:00（Tech Lead 自治 · 派发 health/dating E2E）
+
+### 0. 触发
+- PO 消息澄清：恢复后的 health/dating 加密读写 E2E 尚未做；该 E2E 需要**小程序/H5 前端的测试用户登录态（CloudBase access token）**，腾讯云控制台登录态不能替代；请让测试账号在前端保持登录，且**不必把 token 发给我（Tech Lead）**。
+- 核验 `integration-checkpoint-20261021.md`（未提交改动，第 11 轮遗留）已记录：`FERNET_ENCRYPTION_KEY` 已在 CloudBase 控制台恢复（`recordEvent`/`listEvents`/`generatePlan` 环境变量已配置），但恢复后 E2E 尚缺应用侧用户 token。
+
+### 1. 事实澄清（关键区分）
+- **控制台登录（Codex 正在做的）= 部署/环境变量管理**，给不了应用侧用户 token。
+- **E2E 需要的用户 token 只能由前端登录产生**，且只在前端 ↔ Codex 之间，绝不经过 Tech Lead（与 ADR-006 / 无凭证策略一致）。
+- 因此 E2E 必须走「前端驱动真实用户路径 + Codex 服务端核验」或「PO 把 token 直交 Codex（不经 Tech Lead）」，两条路线均不向 Tech Lead 暴露 token。
+
+### 2. 派发动作（KB 通道，自治）
+- 新建 `docs/tech-lead-directive-e2e-health-dating-20261021.md`：派发 E2E 复测，明确 §0 token 边界、§1 前提确认（FERNET 已恢复 + 加密/解密代码已部署）、§2 两路线（A 前端驱动零外传 / B 精确 HTTP 计时）、§3 证据与门禁（补 checkpoint 敏感域段落、token 不进 KB/PR）。
+- 更新 `docs/po-action-items.md`：第 11 轮遗留的 3 个未提交文档改动（heartbeat/checkpoint/po-action-items）并入本轮，回合号升为第 12 轮；🟡 Codex 项改为"E2E 已派发，需 PO 前端保持登录驱动，唤醒 Codex 执行"。
+
+### 3. 对 PO（你）的操作指向（详见下条回复）
+- 前端用测试账号登录并保持登录态（建议命名用户，非匿名，以便验证 RLS 隔离）；触发 health(`body_sense`)+dating 写入并回读明文；记下大致提交时刻。
+- 不用截/发 token 给 Tech Lead；前端保持登录即可。
+
+### 4. 门禁与下一步
+- Codex 执行后须在 checkpoint 补录：状态码、脱敏响应、耗时、密文样本（脱敏）、解密回读、RLS 隔离结果；硬门禁（远端+可复现+不伪造+token 不进 KB）由 Tech Lead 复核合并。
+- 本轮无新 B 类拍板；ADR-006 隐私裁定（本期不开放跨用户 cohort）维持。
+
+### 5. 本轮结论
+FERNET 密钥恢复（控制台）已确认；health/dating 加密读写 E2E 已派发并明确 token 边界。待 PO 前端保持登录驱动 + 唤醒 Codex 服务端核验。待办清单见 `docs/po-action-items.md`（第 12 轮）。
