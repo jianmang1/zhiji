@@ -33,12 +33,15 @@ export default function DashboardPage() {
   const loading = useAnalyticsStore((s) => s.loading)
   const error = useAnalyticsStore((s) => s.error)
   const refresh = useAnalyticsStore((s) => s.refresh)
+  const experience = useAnalyticsStore((s) => s.experience)
+  const refreshExperience = useAnalyticsStore((s) => s.refreshExperience)
   const [expanded, setExpanded] = useState<Domain | null>(null)
 
   useDidShow(() => {
     void (async () => {
       if (await ensureAuthenticated()) {
         await refresh()
+        await refreshExperience()
         await useEventStore.getState().refresh()
       }
     })()
@@ -136,6 +139,31 @@ export default function DashboardPage() {
           </View>
         )
       })}
+
+      <View className="dash__exp">
+        <View className="dash__expHead">
+          <Text className="dash__expTitle">体验</Text>
+          <Text className="dash__expBadge">A7</Text>
+        </View>
+        {experience.loadSamples + experience.entrySamples === 0 ? (
+          <Text className="dash__expEmpty">
+            还没有体验样本。产生 app_open 与一次打卡后，这里会显示冷启动与打卡耗时。
+          </Text>
+        ) : (
+          <View className="dash__expRows">
+            <Text className="dash__expRow">
+              冷启动 P50 {experience.loadP50 ?? '—'} ms · P95 {experience.loadP95 ?? '—'} ms（
+              {experience.loadSamples} 样本）
+            </Text>
+            <Text className="dash__expRow">
+              打卡完成时长中位数 {experience.entryMedian ?? '—'} ms（{experience.entrySamples} 样本）
+            </Text>
+          </View>
+        )}
+        <Text className="dash__expNote">
+          时长记在既有事件的 payload 里（load_ms / entry_ms），不新增漏斗步（契约 §8 step 枚举已冻结）。
+        </Text>
+      </View>
 
       <View className="dash__ai">
         <View className="dash__aiHead">

@@ -19,6 +19,7 @@ import {
 } from '../services/funnel'
 import type { TrackPlan } from '../services/tracking'
 import { scoreAll, type ScoreResult } from '../scoring/engine'
+import { summarizeExperience, type ExperienceSummary } from '../services/experience'
 import type {
   AnalyticsEventInsert,
   AnalyticsEventRow,
@@ -83,6 +84,9 @@ export interface AnalyticsState {
   segments: SegmentOptionsResult
   segment: Segment
   analyticsEvents: AnalyticsEventRow[]
+  /** 体验指标（A7）：来自埋点 payload 的 load_ms / entry_ms */
+  experience: ExperienceSummary
+  refreshExperience: () => Promise<void>
   profile: ProfileRow | null
   loading: boolean
   funnelLoading: boolean
@@ -111,6 +115,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
   segments: { channels: [], regions: [], userTypes: [] },
   segment: {},
   analyticsEvents: [],
+  experience: { loadP50: null, loadP95: null, entryMedian: null, loadSamples: 0, entrySamples: 0 },
   profile: null,
   loading: false,
   funnelLoading: false,
@@ -222,6 +227,16 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
         domain: plan.domain ?? undefined,
         payload: plan.payload,
       })
+    }
+  },
+
+  /** A7：从埋点 payload 汇总体验指标；失败不影响主看板 */
+  async refreshExperience() {
+    try {
+      const rows = await selectAnalyticsEvents(200)
+      set({ experience: summarizeExperience(rows) })
+    } catch {
+      // 体验指标是附加信息，读取失败不覆盖主看板状态
     }
   },
 

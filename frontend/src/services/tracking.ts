@@ -15,9 +15,14 @@ export interface TrackPlan {
 }
 
 /** 打开小程序：获取 + 激活 */
-export function plansForAppOpen(): TrackPlan[] {
+export function plansForAppOpen(loadMs?: number): TrackPlan[] {
   return [
-    { name: 'app_open', step: 'product.acquire', domain: null },
+    {
+      name: 'app_open',
+      step: 'product.acquire',
+      domain: null,
+      payload: typeof loadMs === 'number' && loadMs >= 0 ? { load_ms: Math.round(loadMs) } : undefined,
+    },
     { name: 'app_open', step: 'product.activate', domain: null },
   ]
 }

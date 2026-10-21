@@ -80,3 +80,14 @@ describe('打卡埋点映射', () => {
     expect(plans[0]?.step).toBeNull()
   })
 })
+describe('体验埋点（A7）', () => {
+  it('app_open 携带冷启动耗时 load_ms（不新增漏斗步）', () => {
+    const plans = plansForAppOpen(123.6)
+    expect(plans[0]?.payload).toEqual({ load_ms: 124 })
+    expect(plans[0]?.step).toBe('product.acquire')
+  })
+
+  it('未传耗时时不带 payload', () => {
+    expect(plansForAppOpen()[0]?.payload).toBeUndefined()
+  })
+})
