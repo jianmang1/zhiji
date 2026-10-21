@@ -85,14 +85,14 @@
 
 ## 5. 云函数接口（服务端逻辑，Codex 负责）
 
-| 函数 | 入参 | 行为 | 返回 |
-|------|------|------|------|
-| `recordEvent` | payload（domain,type,ts,payload,source） | 注入 user_id=auth.uid() 插入 events | 新事件 id | 本地已实现并通过单元测试；待云端联调 |
-| `listEvents` | domain?, range? | 按当前用户查 events（+tags） | 事件列表 | 本地已实现并通过单元测试；待云端联调 |
-| `upsertGoal` / `listGoals` | goal 字段 / — | 目标增查（带 user_id） | 目标 |
-| `generatePlan` | based_on（含 domain 与查询范围） | 以滚动 7 天 events 镜像前端规则引擎算 score/tier；LLM 生成摘要、行动和里程碑后写 plans | 新方案 id | 本地实现并通过单元测试；待云端联调 |
-| `getFunnel` | domain?（默认 product）, range{from,to}, segment? | 在当前用户 RLS 可见的 analytics_events 中按 step 聚合，并以本人 profile 补充分群维度 | steps, bottleneck_step, segment? | 本地实现并通过单元测试；待云端 RLS 联调 |
-| `listPlans` | — | 按当前用户查 plans | 方案列表 |
+| 函数 | 入参 | 行为 | 返回 | 状态 |
+|------|------|------|------|------|
+| `recordEvent` | payload（domain,type,ts,payload,source） | 注入 user_id=auth.uid() 插入 events | 新事件 id | **已实现（E2E2 验证通过，见 [集成检查点](integration-checkpoint-20261021.md)）** |
+| `listEvents` | domain?, range? | 按当前用户查 events（+tags） | 事件列表 | **已实现（E2E2 验证通过，见 [集成检查点](integration-checkpoint-20261021.md)）** |
+| `upsertGoal` / `listGoals` | goal 字段 / — | 目标增查；读写必须遵守当前用户 RLS | 目标 | **未提供云函数**；客户端已有 `selectGoals` RDB 查询，目标写入端点未实现 |
+| `generatePlan` | based_on（含 domain 与查询范围） | 以滚动 7 天 events 镜像前端规则引擎算 score/tier；LLM 生成摘要、行动和里程碑后写 plans | 新方案 id | **已实现（E2E2 验证通过，见 [集成检查点](integration-checkpoint-20261021.md)）** |
+| `getFunnel` | domain?（默认 product）, range{from,to}, segment? | 在当前用户 RLS 可见的 analytics_events 中按 step 聚合，并以本人 profile 补充分群维度 | steps, bottleneck_step, segment? | **已实现（E2E2 验证通过，见 [集成检查点](integration-checkpoint-20261021.md)）** |
+| `listPlans` | — | 按当前用户查 plans | 方案列表 | **未提供云函数**；页面仍为占位，尚未接入读取 |
 
 > 非敏感数据的高频读写可由前端直接 `cloud.rdb()` 完成（受 RLS）。**health/dating 敏感事件必须通过 `recordEvent` 写入、通过 `listEvents` 读取**，由云函数负责加密和解密 payload；不得由客户端直接写入或读取敏感事件 payload。复杂聚合与 AI 分析走云函数。
 
