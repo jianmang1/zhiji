@@ -637,7 +637,8 @@ FERNET 密钥恢复（控制台）已确认；health/dating 加密读写 E2E 已
 - `git fetch origin` **失败**（schannel：SSL/TLS 握手失败，连接中断）→ **无法连接 GitHub**。随后以 `GIT_SSL_NO_VERIFY=1` 重试仍失败（同一 schannel 栈）。
 - **多栈复验网络确已不可达**：`curl https://api.github.com/...` 返回**空体**；Node `https.get` 报 `ETIMEDOUT 198.18.0.174:443`（透明代理，出向 HTTPS 整段超时）。**确证本轮出向网络中断**，非偶发。
 - **可信基线**：本地 `git rev-parse main` = `003e30f`，与第 16 轮经 ff 推送成功确认的 `origin/main` 权威值一致（第 16 轮 `git push` 被接受为快进、无拒绝，反证推送瞬间 origin 无新提交介入）。本轮**以 `origin/main = 003e30f` 为事实源**，并显式标注：因网络中断，**未能列举 GitHub 实际 OPEN PR / 新提交**，故**不宣称「无 OPEN PR」**，属**未核验**，下轮网络恢复后必复核。
-- 本地 `git merge-base --is-ancestor origin/feat/* origin/main` 因 `origin/feat/*` 远端引用随 fetch 失效而**过期不可信**（全部回 NOT-merged 为陈旧引用所致，非真实分叉）；以第 16 轮已核验「9 条 feat/* 全合 main」为参考，疑无新增，但属**未核验**。
+- 本地 `git merge-base --is-ancestor origin/feat/* origin/main` 因 `origin/feat/*` 远端引用**不解析（unknown revision）**而**不可作为判据**（回 NOT-merged 实为命令报错回退，非真实分叉）。
+- **网络恢复后权威复验（本轮末 `git fetch` 成功）**：`git ls-remote origin` 显示远端 heads 仅含已知 9 条 `feat/*` + `docs/privacy-kb-approval` + `main`（**无新增分支**）；`refs/pull/*/head` 仅 #1–#10（**无 #11+**）；且本轮 `git push` 以快进 `003e30f..21f013e` 被接受，反证 `origin/main` 自 003e30f 起**无新提交介入** → 本轮窗口无 PR 合并或新建。综合判：feat/* 全合 main 状态延续，**无未决 OPEN PR**。
 
 ### 2. 状态收敛核验（沿用已核验事实，无新增）
 - A 类全闭环（A1–A6 = Codex PR#9；A2/A7/A8 + plans/diagnostics/body_sense = DeepSeek PR#4/#6/#7/#8），无新 A 项可达标且无需 CloudBase 凭证。
@@ -656,4 +657,4 @@ FERNET 密钥恢复（控制台）已确认；health/dating 加密读写 E2E 已
 - 不伪造远端状态/测试结果；无新 B 类，不升 PO。
 
 ### 5. 本轮结论
-`origin/main = 003e30f`（第 16 轮 ff 推送确认值；本轮 `git fetch` 因出向 HTTPS 全中断未连 GitHub，本地 main 经 `git rev-parse` 核验同为 `003e30f`，状态连续无断裂）。**远端 OPEN PR / 新提交因网络中断未核验，不宣称「无 OPEN PR」**，下轮网络恢复必复核。A/B 类全闭环，9 条 `feat/*` 据第 16 轮已核验全合 main。唯一活项 = health/dating 加密读写 E2E，待 PO 前端登录 + Codex 服务端核验（token 不经 Tech Lead）。本轮无新增拍板/待办。待 PO 处理清单见 `docs/po-action-items.md`（第 17 轮）。
+`origin/main = 21f013e`（本轮心跳提交；初 `git fetch` 因出向 HTTPS 中断失败，末次 `git fetch` 成功、`git push` 以快进 `003e30f..21f013e` 被接受，反证 origin 自 003e30f 无新提交介入）。经 `git ls-remote` 权威复验：远端 heads 仅已知分支、`refs/pull` 仅 #1–#10（无 #11+），**无未决 OPEN PR**。A/B 类全闭环，feat/* 全合 main。唯一活项 = health/dating 加密读写 E2E，待 PO 前端登录 + Codex 服务端核验（token 不经 Tech Lead）。本轮无新增拍板/待办。待 PO 处理清单见 `docs/po-action-items.md`（第 17 轮）。
