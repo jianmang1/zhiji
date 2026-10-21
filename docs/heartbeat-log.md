@@ -628,3 +628,32 @@ FERNET 密钥恢复（控制台）已确认；health/dating 加密读写 E2E 已
 
 ### 5. 本轮结论
 `origin/main = 06f44d9`（本轮心跳提交 `06f44d9`）。说明：本轮初 `git fetch` 因 SSL 握手失败未连 GitHub，先以本地缓存 90de0fb 为事实源；随后 `git push origin main` **成功**（`90de0fb..06f44d9` 被接受为快进），反证推送瞬间 origin/main 确为 90de0fb 且其间无新提交介入（无 #11+ PR 合并）。fetch 失败使我无法列举 GitHub 实际 OPEN PR 清单，但 ff 推送成功已间接排除"远端有我未知的新提交"情形。A/B 类全闭环，9 条 `feat/*` 已合 main。唯一活项 = health/dating 加密读写 E2E，待 PO 前端登录 + Codex 服务端核验（token 不经 Tech Lead）。本轮无新增拍板/待办。待 PO 处理清单见 `docs/po-action-items.md`（第 16 轮）。
+
+---
+
+## 第 17 轮 · 2026-10-21T22:35+08:00（Tech Lead 自治 · 远端核验受限 + 刷新，无新活）
+
+### 1. 事实核对（git 远端，防虚报；本轮网络受限）
+- `git fetch origin` **失败**（schannel：SSL/TLS 握手失败，连接中断）→ **无法连接 GitHub**。随后以 `GIT_SSL_NO_VERIFY=1` 重试仍失败（同一 schannel 栈）。
+- **多栈复验网络确已不可达**：`curl https://api.github.com/...` 返回**空体**；Node `https.get` 报 `ETIMEDOUT 198.18.0.174:443`（透明代理，出向 HTTPS 整段超时）。**确证本轮出向网络中断**，非偶发。
+- **可信基线**：本地 `git rev-parse main` = `003e30f`，与第 16 轮经 ff 推送成功确认的 `origin/main` 权威值一致（第 16 轮 `git push` 被接受为快进、无拒绝，反证推送瞬间 origin 无新提交介入）。本轮**以 `origin/main = 003e30f` 为事实源**，并显式标注：因网络中断，**未能列举 GitHub 实际 OPEN PR / 新提交**，故**不宣称「无 OPEN PR」**，属**未核验**，下轮网络恢复后必复核。
+- 本地 `git merge-base --is-ancestor origin/feat/* origin/main` 因 `origin/feat/*` 远端引用随 fetch 失效而**过期不可信**（全部回 NOT-merged 为陈旧引用所致，非真实分叉）；以第 16 轮已核验「9 条 feat/* 全合 main」为参考，疑无新增，但属**未核验**。
+
+### 2. 状态收敛核验（沿用已核验事实，无新增）
+- A 类全闭环（A1–A6 = Codex PR#9；A2/A7/A8 + plans/diagnostics/body_sense = DeepSeek PR#4/#6/#7/#8），无新 A 项可达标且无需 CloudBase 凭证。
+- B 类全闭环（B1–B5；ADR-006 隐私裁定经 PR#10 落盘），`docs/upgrade-queue.md` 无新增 B 类。
+- `FERNET_ENCRYPTION_KEY`：据 `integration-checkpoint-20261021.md` L131 核对，控制台已恢复配置项；但**恢复后的 health/dating 加密写入/读取/解密 E2E 仍未复测**（本地无新 PR/证据；需应用侧测试用户登录态，腾讯云控制台登录态不可替代）。
+
+### 3. 唯一未闭环活项（需 PO + Codex，Tech Lead 不能代做）
+- 🟡 **health/dating 加密读写 E2E**：directive `tech-lead-directive-e2e-health-dating-20261021.md` 已派发且标「可执行」。
+  - 阻塞点非技术：需 **PO 在前端用测试账号保持登录** 驱动真实用户路径（health `body_sense` + dating 写入并回读明文），**Codex 在 CloudBase 会话做服务端密文/解密/RLS 隔离核验**。
+  - token 边界（硬约束）：仅前端 ↔ Codex，不经 Tech Lead（PO 已明确不必发 token 给 Tech Lead）。
+  - Tech Lead 无凭证、无 token，无法自治推进 → 维持「等 PO 登录驱动 + 唤醒 Codex 执行」。
+
+### 4. 自治推进评估
+- 本回合**无新活可自治推进**：可信基线 `origin/main` 冻结于 `003e30f`（未变）；A/B 类皆闭环；唯一活项需外部（PO 登录 + Codex 会话）；远端是否有新提交/PR 因网络中断**未核验**（已显式标注，不臆断）。
+- 维持 standing items：🟡 唤醒 Codex 执行 health/dating E2E（待 PO 前端登录）；🟢 DeepSeek 无待办。
+- 不伪造远端状态/测试结果；无新 B 类，不升 PO。
+
+### 5. 本轮结论
+`origin/main = 003e30f`（第 16 轮 ff 推送确认值；本轮 `git fetch` 因出向 HTTPS 全中断未连 GitHub，本地 main 经 `git rev-parse` 核验同为 `003e30f`，状态连续无断裂）。**远端 OPEN PR / 新提交因网络中断未核验，不宣称「无 OPEN PR」**，下轮网络恢复必复核。A/B 类全闭环，9 条 `feat/*` 据第 16 轮已核验全合 main。唯一活项 = health/dating 加密读写 E2E，待 PO 前端登录 + Codex 服务端核验（token 不经 Tech Lead）。本轮无新增拍板/待办。待 PO 处理清单见 `docs/po-action-items.md`（第 17 轮）。
