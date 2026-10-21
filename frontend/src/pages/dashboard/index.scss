@@ -237,3 +237,54 @@
   line-height: 1.7;
   color: var(--muted);
 }
+.dash__exp {
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  background: #ffffff;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dash__expHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dash__expTitle {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.dash__expBadge {
+  font-size: 10px;
+  background: var(--ink);
+  color: #ffffff;
+  padding: 1px 6px;
+  font-weight: 800;
+}
+
+.dash__expRows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dash__expRow {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dash__expEmpty {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.dash__expNote {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.6;
+}

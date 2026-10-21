@@ -17,6 +17,11 @@ Taro 4 + React + TypeScript 前端，编译 **微信小程序 + H5** 双端；�
 | 6 | **行为埋点** | `src/services/tracking.ts`、`src/stores/analyticsStore.ts`（`track` / `trackPlans`） |
 | 7 | **两层漏斗看板** | `src/services/funnel.ts`、`src/pages/funnel/*` |
 
+> **Phase 3 A 类（自治推进，见 `docs/phase3-backlog.md`）**
+> - **A2** 接入 `getFunnel`：`src/services/funnelApi.ts`（4 次请求：product + 三王）+ `adaptRemoteFunnel` 适配；云端不可用时回退本地计算，漏斗页标注数据来源。
+> - **A7** 体验指标：`src/services/{perf,experience}.ts`。时长写入既有事件的 `payload`（`load_ms` / `entry_ms`），**不新增漏斗步**（契约 §8 `step` 枚举 v1 已冻结），看板以「体验」卡展示 P50/P95/中位数。
+> - **A8** 分群看板：`src/services/segments.ts` + `src/pages/segments`，按 `channel`/`region`/`user_type` 拆分（契约 §8），缺失值归「(未标注)」。
+
 ## 2. 命令
 
 ```bash
@@ -164,7 +169,7 @@ src/
   stores/                       auth / event / analytics
   components/TierBadge.tsx      段位徽章
   styles/kings.ts               三王与段位色 tokens
-  pages/{login,entry,dashboard,funnel,plans}/
+  pages/{login,entry,dashboard,funnel,segments,plans}/
   utils/                        storage / datetime / error / guard
 tests/  e2e/
 ```

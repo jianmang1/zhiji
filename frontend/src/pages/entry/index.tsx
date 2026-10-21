@@ -11,7 +11,7 @@
  */
 import { Button, Input, Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { EVENT_TYPES, getEventTypeSpec, type FieldSpec } from '../../schemas/payload'
 import { DEFAULT_SOURCE } from '../../schemas/event'
 import {
@@ -22,6 +22,7 @@ import {
 } from '../../schemas/spending'
 import { isCloudFunctionConfigured } from '../../services/events'
 import { plansForSpending } from '../../services/tracking'
+import { elapsedMs } from '../../services/perf'
 import { DOMAINS, KING_LABELS, isSensitiveDomain, type Domain } from '../../types/contract'
 import { useEventStore } from '../../stores/eventStore'
 import { useAnalyticsStore } from '../../stores/analyticsStore'
@@ -65,6 +66,7 @@ export default function EntryPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [via, setVia] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const shownAtRef = useRef(Date.now())
   const [spendCategory, setSpendCategory] = useState<SpendCategory>('hedonic')
   const [spendAmount, setSpendAmount] = useState('')
   const [spendError, setSpendError] = useState<string | null>(null)
@@ -75,6 +77,7 @@ export default function EntryPage() {
   const trackPlans = useAnalyticsStore((s) => s.trackPlans)
 
   useDidShow(() => {
+    shownAtRef.current = Date.now()
     void (async () => {
       if (await ensureAuthenticated()) {
         // 供埋点判定"首次打卡"与"综合打卡"，同时给看板一份最新数据
@@ -120,7 +123,7 @@ export default function EntryPage() {
         ts: fromLocalInput(tsText) ?? tsText,
         payload: buildPayload(spec.fields, values),
         source: DEFAULT_SOURCE,
-      })
+      }, { entryDurationMs: elapsedMs(shownAtRef.current) })
       if (result.ok) {
         setValues({})
         setVia(result.via)
