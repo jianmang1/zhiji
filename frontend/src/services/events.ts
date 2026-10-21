@@ -41,7 +41,7 @@ function errorMessage(payload: unknown, status: number): string {
   return `云函数调用失败（HTTP ${status}）`
 }
 
-async function callFunction<T>(name: string, body: Record<string, unknown>): Promise<T> {
+export async function callHttpFunction<T>(name: string, body: Record<string, unknown>): Promise<T> {
   if (!isCloudFunctionConfigured()) {
     throw new CloudFunctionUnavailableError(name)
   }
@@ -68,7 +68,7 @@ export async function recordEventRemote(input: EventInsert): Promise<BigIntId> {
     payload: input.payload,
     source: input.source,
   }
-  const result = await callFunction<{ id: BigIntId }>('recordEvent', body)
+  const result = await callHttpFunction<{ id: BigIntId }>('recordEvent', body)
   return result.id
 }
 
@@ -83,7 +83,7 @@ export async function listEventsRemote(query: ListEventsQuery = {}): Promise<Eve
   const body: Record<string, unknown> = { limit: query.limit ?? 50 }
   if (query.domain) body.domain = query.domain
   if (query.range) body.range = query.range
-  const rows = await callFunction<EventRow[]>('listEvents', body)
+  const rows = await callHttpFunction<EventRow[]>('listEvents', body)
   return Array.isArray(rows) ? rows : []
 }
 

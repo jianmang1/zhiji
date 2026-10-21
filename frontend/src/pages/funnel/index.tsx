@@ -29,6 +29,7 @@ export default function FunnelPage() {
   const setSegment = useAnalyticsStore((s) => s.setSegment)
   const refreshFunnel = useAnalyticsStore((s) => s.refreshFunnel)
   const loading = useAnalyticsStore((s) => s.funnelLoading)
+  const funnelSource = useAnalyticsStore((s) => s.funnelSource)
 
   useDidShow(() => {
     void (async () => {
@@ -57,7 +58,10 @@ export default function FunnelPage() {
       </View>
 
       <Text className="funnel__note">
-        v1 前端本地算（analytics_events）。瓶颈步 = 单步流失率最大的那步，红框标出。
+        {funnelSource === 'cloud'
+          ? '数据来源：getFunnel 云函数（仅聚合 RLS 内当前用户可见事件）。'
+          : '数据来源：前端本地计算（云函数端点未配置或不可用时的降级口径）。'}
+        瓶颈步 = 单步流失率最大的那步，红框标出。
       </Text>
 
       <View className="funnel__segments">

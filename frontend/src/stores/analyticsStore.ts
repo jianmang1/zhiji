@@ -8,7 +8,8 @@ import {
   selectProfile,
   upsertProfile,
 } from '../services/rdb'
-import { loadDashboardData } from '../services/events'
+import { isCloudFunctionConfigured, loadDashboardData } from '../services/events'
+import { fetchRemoteFunnels, funnelRange } from '../services/funnelApi'
 import {
   buildFunnelReports,
   reactiveCount,
@@ -76,6 +77,8 @@ export interface AnalyticsState {
   recent: EventRow[]
   unavailableDomains: Domain[]
   funnel: FunnelReport[]
+  /** 漏斗数据来源：cloud = getFunnel 云函数，local = 前端本地计算 */
+  funnelSource: 'local' | 'cloud'
   reactive: number
   segments: SegmentOptionsResult
   segment: Segment
@@ -103,6 +106,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
   recent: [],
   unavailableDomains: [],
   funnel: [],
+  funnelSource: 'local',
   reactive: 0,
   segments: { channels: [], regions: [], userTypes: [] },
   segment: {},
@@ -149,9 +153,23 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     try {
       const rows = await selectAnalyticsEvents(500)
       const { segment } = get()
+      let funnel = buildFunnelReports(rows, segment)
+      let funnelSource: 'local' | 'cloud' = 'local'
+
+      if (isCloudFunctionConfigured()) {
+        try {
+          funnel = await fetchRemoteFunnels(segment, funnelRange())
+          funnelSource = 'cloud'
+        } catch {
+          // 云函数不可用（未部署 / 网络 / 鉴权）→ 回退本地计算；不伪造数据
+          funnel = buildFunnelReports(rows, segment)
+        }
+      }
+
       set({
         analyticsEvents: rows,
-        funnel: buildFunnelReports(rows, segment),
+        funnel,
+        funnelSource,
         reactive: reactiveCount(rows),
         segments: segmentOptions(rows),
         funnelLoading: false,
@@ -168,6 +186,10 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
       funnel: buildFunnelReports(analyticsEvents, segment),
       reactive: reactiveCount(analyticsEvents),
     })
+    // 云端模式下分群需要重新向 getFunnel 聚合
+    if (isCloudFunctionConfigured()) {
+      void get().refreshFunnel()
+    }
   },
 
   async track(name, step, options = {}) {
