@@ -66,7 +66,15 @@ def main() -> int:
         destination.mkdir()
         shutil.copy2(source / name / "main.py", destination / "main.py")
         shutil.copy2(source / name / "scf_bootstrap", destination / "scf_bootstrap")
-        (destination / "scf_bootstrap").chmod(0o755)
+        bootstrap = destination / "scf_bootstrap"
+        bootstrap_content = bootstrap.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+        if args.dependency_layer:
+            bootstrap_content = bootstrap_content.replace(
+                b'export PYTHONPATH="./third_party:$PYTHONPATH"',
+                b'export PYTHONPATH="/opt/python/third_party:./third_party:$PYTHONPATH"',
+            )
+        bootstrap.write_bytes(bootstrap_content)
+        bootstrap.chmod(0o755)
         (destination / "package.json").write_text(
             json.dumps({"name": name}, indent=2) + "\n", encoding="utf-8"
         )
@@ -81,15 +89,6 @@ def main() -> int:
                 dependency_bundle,
                 destination / "third_party",
                 ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
-            )
-        if args.dependency_layer:
-            bootstrap = destination / "scf_bootstrap"
-            bootstrap.write_text(
-                bootstrap.read_text(encoding="utf-8").replace(
-                    'export PYTHONPATH="./third_party:$PYTHONPATH"',
-                    'export PYTHONPATH="/opt/python/third_party:./third_party:$PYTHONPATH"',
-                ),
-                encoding="utf-8",
             )
         print(f"Prepared {destination}")
     if dependency_bundle.exists():
