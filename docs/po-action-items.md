@@ -2,12 +2,13 @@
 
 > 由「执己 Phase3 自主心跳」每轮覆盖更新。列出需要你（PO）介入的事项：拍板决策、唤醒 Codex/DeepSeek 会话。其余执行类问题由三方在 Aurora KB 自治闭环，不在此列。
 > 格式：🔴 拍板 / 🟡 唤醒 Codex（CloudBase 凭证） / 🟢 唤醒 DeepSeek（前端）。
-> 本轮回合：2026-10-21T19:21+08:00（第 14 轮）。
+> 本轮回合：2026-10-21T20:24+08:00（第 15 轮）。
 
 ## 📌 本轮核验结论（Tech Lead 自治核验，无需你介入）
-- `origin/main = 93a794c`（第 13 轮末值，本轮 `git fetch` 后**无新提交**）。本地 `main` 干净，`ff` 已同步。
-- 全部 `feat/*` 分支 + PR#1–#10 均合 main，**当前无 OPEN PR**；A 类（A1–A6 + A2/A7/A8/plans/diagnostics/body_sense）全闭环，B 类（B1–B5 + ADR-006 隐私裁定）全闭环。
-- `FERNET_ENCRYPTION_KEY`：据 `integration-checkpoint-20261021.md` L131 核对，**已在 CloudBase 控制台恢复配置**；但恢复后的 health/dating 加密写入/读取/解密 **E2E 仍未复测**（需应用侧测试用户登录态，控制台登录态不可替代）。
+- `origin/main = 228da1c`（`git fetch` 后**无新提交**；本地 `main` 干净、`ff` 已同步）。更正：第 14 轮末记录的 `93a794c` 已被其后 ff 推送的 `228da1c`（第 14 轮心跳文档提交）取代，当前权威值 = `228da1c`；已核验 `93a794c` 确为 `228da1c` 的祖先，状态连续无断裂。
+- 全部 `feat/*` 分支（9 条）+ PR#1–#10 均合 main，**当前无 OPEN PR**（无 #11+）。
+- A 类（A1–A6 + A2/A7/A8/plans/diagnostics/body_sense）全闭环，B 类（B1–B5 + ADR-006 隐私裁定）全闭环。
+- `FERNET_ENCRYPTION_KEY`：据 `integration-checkpoint-20261021.md` L131 核对，**已在 CloudBase 控制台恢复配置**；但恢复后 health/dating 加密写入/读取/解密 **E2E 仍未复测**（无新 PR/证据，需应用侧测试用户登录态，控制台登录态不可替代）。
 
 ## 🔴 拍板 / 授权事项（需你决策）
 - **本轮无新增拍板项。** 历史 B 类（B1–B5）与 ADR-006 隐私裁定（本期不开放跨用户 cohort）均已裁决闭环，无遗留动作。
@@ -23,4 +24,4 @@
 > **DeepSeek 当前无任何待办。** 前端链路（A2/A7/A8/plans/diagnostics/body_sense）已全部合入 main（PR#4 + PR#8 + PR#9 后端增强），B5=A 已落地。无需唤醒。
 
 ## 本轮结论
-**`origin/main = 93a794c`（A/B 类全闭环，无 OPEN PR，`FERNET_ENCRYPTION_KEY` 已恢复但 health/dating E2E 待复测）。** 剩余唯一活项：**🟡 唤醒 Codex 执行 health/dating 加密读写 E2E** ——需你（PO）在前端用测试账号保持登录驱动真实用户路径，Codex 做服务端密文/解密/RLS 隔离核验（directive 已派发）。token 边界：仅前端↔Codex，不经 Tech Lead。心跳每轮刷新本文件。
+**`origin/main = 228da1c`（A/B 类全闭环，无 OPEN PR，`FERNET_ENCRYPTION_KEY` 已恢复但 health/dating E2E 待复测）。** 剩余唯一活项：**🟡 唤醒 Codex 执行 health/dating 加密读写 E2E** ——需你（PO）在前端用测试账号保持登录驱动真实用户路径，Codex 做服务端密文/解密/RLS 隔离核验（directive 已派发）。token 边界：仅前端↔Codex，不经 Tech Lead。心跳每轮刷新本文件。
