@@ -1,10 +1,11 @@
-# 数据契约 v1.4（CloudBase 原生 · public schema）
+# 数据契约 v1.5（CloudBase 原生 · public schema）
 
 > 这是 **执己** 项目在 CloudBase 原生模型下的**唯一数据契约**（原则三）。
 > 取代原 `docs/api/openapi.yaml` 作为前端数据访问契约；openapi.yaml 降为可选 HTTP 云函数端点文档。
 > Codex（云函数）/ DeepSeek（前端 SDK）均以此文档为准，互不直连。
 >
 > **2026-10-20 更新（v1.4）**：§8 `step` 字段改为**命名空间枚举**（`product.*`/`dating.*`/`health.*`/`work.*`，仅列 v1 步骤，Phase 3 留 TODO），支撑两层漏斗聚合；v1.3 的 §8 分析层（`analytics_events`+`profiles` 表，前向兼容）维持不变。v1.2 冻结项（dating 4 类热点、评分阈值、等级命名、generatePlan schema）维持不变。
+> **2026-10-21 更新（v1.5）**：ADR-005 采纳 A——§3 health 域新增 `body_sense` type（`{waist_cm?, feel?:enum('great','ok','tired'), note?}`），补齐薄肌王"体感/围度"漏斗步的可产出事件；零数据库迁移（`events.type` 为自由 text），仅改契约 §3 + 前端注册表，Codex 零改；冻结项变更受控生效。
 
 ## 1. 鉴权模型
 
@@ -64,7 +65,7 @@
 
 ## 3. 各域 type 与 payload 草案（v1 三王）
 
-- **health（薄肌王）**：`water{ml}` / `sleep{duration_h,quality}` / `workout{type,duration_min,calorie}`
+- **health（薄肌王）**：`water{ml}` / `sleep{duration_h,quality}` / `workout{type,duration_min,calorie}` / `body_sense{waist_cm?:number, feel?:enum('great','ok','tired'), note?:text}`（ADR-005 采纳 A，2026-10-21；零迁移）
 - **work（力王）**：`work_log{hours,wage,salary,commute_min}`
 - **dating（黄毛王·异性交往）**：
   - `approach` 主动搭讪：`{count:int≥1, channel:enum('online','offline','social'), got_response:bool}`
@@ -80,7 +81,7 @@
 
 所有 `public` 表均 `ENABLE ROW LEVEL SECURITY`，策略：`USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid())`。
 `tags` 经 `event_id` 间接归属当前用户（子查询校验）。
-前端（authenticated 角色）只能读写自己的行；云函数（service_role）可越权做聚合/分析。
+前端（authenticated 角色）只能读写自己的行。当前云函数也透传调用者的 authenticated access token，因此事件、方案和漏斗结果仍受同一 RLS 策略约束；本项目当前没有启用可绕过 RLS 的 service_role 聚合。
 
 ## 5. 云函数接口（服务端逻辑，Codex 负责）
 
@@ -89,7 +90,8 @@
 | `recordEvent` | payload（domain,type,ts,payload,source） | 注入 user_id=auth.uid() 插入 events | 新事件 id | 本地已实现并通过单元测试；待云端联调 |
 | `listEvents` | domain?, range? | 按当前用户查 events（+tags） | 事件列表 | 本地已实现并通过单元测试；待云端联调 |
 | `upsertGoal` / `listGoals` | goal 字段 / — | 目标增查（带 user_id） | 目标 |
-| `generatePlan` | based_on（查询范围） | 调 LLM 分析 → 写 plans（generated_by 记模型） | 新方案 id | 本地已实现并通过单元测试；待云端联调 |
+| `generatePlan` | based_on（含 domain 与查询范围） | 以滚动 7 天 events 镜像前端规则引擎算 score/tier；LLM 生成摘要、行动和里程碑后写 plans | 新方案 id | 本地实现并通过单元测试；待云端联调 |
+| `getFunnel` | domain?（默认 product）, range{from,to}, segment? | 在当前用户 RLS 可见的 analytics_events 中按 step 聚合，并以本人 profile 补充分群维度 | steps, bottleneck_step, segment? | 本地实现并通过单元测试；待云端 RLS 联调 |
 | `listPlans` | — | 按当前用户查 plans | 方案列表 |
 
 > 非敏感数据的高频读写可由前端直接 `cloud.rdb()` 完成（受 RLS）。**health/dating 敏感事件必须通过 `recordEvent` 写入、通过 `listEvents` 读取**，由云函数负责加密和解密 payload；不得由客户端直接写入或读取敏感事件 payload。复杂聚合与 AI 分析走云函数。
@@ -148,7 +150,7 @@ LLM 产出的 `plans.content` 必须符合以下 JSON 结构（三王通用，Co
 **`step` 命名空间枚举（v1，Phase 3 步骤留 TODO）**：
 - `product.acquire` / `product.activate` / `product.retain` / `product.habit` / `product.value` / `product.refer` / `product.reactive`
 - `dating.onboard` / `dating.approach` / `dating.response` / `dating.date` / `dating.stage_up` / `dating.stage5` / `dating.refer`
-- `health.onboard` / `health.water` / `health.sleep` / `health.workout` / `health.active_day` / `health.body_sense` / `health.refer`
+- `health.onboard` / `health.water` / `health.sleep` / `health.workout` / `health.active_day` / `health.body_sense` / `health.refer`（事件 type 见 §3，ADR-005 采纳 A）
 - `work.onboard` / `work.wage` / `work.spend` / `work.retain` / `work.refer`
 - *Phase 3 TODO（不在 v1 枚举）：`health.body_fat`/`health.in_band`、`work.save`/`work.grow`/`work.fin_health`*
 - `getFunnel` 据此 `step` 聚合两层漏斗；`name` 仅记录原始行为，`step` 才是漏斗归属。
@@ -168,9 +170,9 @@ LLM 产出的 `plans.content` 必须符合以下 JSON 结构（三王通用，Co
 - `category` 枚举：`rent`(房租, 与力王程度**正比**) / `hedonic`(奶茶·烧烤·小吃等享乐, **反比**) / `for_others`(花在别人身上, **正比**) / `other`。
 - v1 仅作漏斗"消费"步完成信号；Phase 3 据 category 做力王消费观洞察（正比/反比加权）。
 
-### 云函数（Phase 3 计算，v1 可仅存）
+### 云函数
 - `trackAnalytics`：前端直接 `cloud.rdb()` 写 `analytics_events`（非敏感，受 RLS）；无需云函数。
-- `getFunnel(domain, range, segment?)`：按 `step` 命名空间枚举（§8）聚合 `analytics_events` + `events` 成**两层漏斗**（产品级 `product.*` / 各王 `dating.*`/`health.*`/`work.*`），输出各步转化率/drop-off/瓶颈步，按 `channel`/`region`/`user_type` 分群。Phase 3 实现，v1 前端看板可先拉原始事件本地算基础漏斗。
+- `getFunnel(domain?, range, segment?)`：当前版本每次请求聚合一个漏斗（默认产品级 `product.*`，或 `dating.*`/`health.*`/`work.*`），输出各步事件数、相邻步转化率/drop-off/瓶颈步；`product.reactive` 单独计数。segment 优先使用埋点字段，缺失时回退到调用者自己的 `profiles` 字段。函数使用调用者 JWT，不使用 `service_role`，因此结果严格限于当前用户可见事件；跨用户 cohort 聚合仍属后续 ADR/权限设计范围。前端看板可分别请求产品级和各王级结果。
 
 ### RLS
 `analytics_events` / `profiles` 同 §4：`ENABLE RLS`，策略 `USING (user_id = auth.uid())`；云函数(service_role) 可越权做分群聚合。

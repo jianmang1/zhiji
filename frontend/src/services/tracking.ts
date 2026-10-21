@@ -73,6 +73,8 @@ export interface CheckinContext {
 }
 
 function healthStepFor(type: string): FunnelStep | null {
+  // 契约 v1.5 / ADR-005-A：body_sense 是薄肌王"体感/围度"漏斗步的产出事件
+  if (type === 'body_sense') return 'health.body_sense'
   if (type === 'water') return 'health.water'
   if (type === 'sleep') return 'health.sleep'
   if (type === 'workout') return 'health.workout'

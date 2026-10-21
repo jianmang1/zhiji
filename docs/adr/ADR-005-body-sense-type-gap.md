@@ -1,6 +1,6 @@
 # ADR-005 薄肌王「体感/围度」漏斗步缺少可产出的 event type
 
-- 状态：Proposed
+- 状态：Accepted（PO 采纳方案 A，2026-10-21）
 - 提案方：DeepSeek（前端 Agent）
 - 日期：2026-10-21
 - 关联：cloudbase-contract.md §3 / §8（撞号说明：ADR-004 已被 Tech Lead 的 user_id→text 采用，故本提案编号为 005）
@@ -69,3 +69,15 @@ health: water{ml} / sleep{duration_h,quality} / workout{type,duration_min,calori
 本 ADR 只提案、不改契约、不改代码。若裁决为 B，前端按 B 实现（仅 analytics 埋点），
 无需回滚任何既有结构；若裁决为 A 而日后要撤销，契约 §3 删去该 type、前端注册表同步删除即可，
 历史 `events` 行保留（`payload` 为 jsonb，不影响读取）。
+
+## 落地记录（2026-10-21）
+
+- **裁定**：PO 采纳**方案 A**；契约已升 **v1.5**，§3 health 增加
+  `body_sense{waist_cm?:number, feel?:enum('great','ok','tired'), note?:text}`。
+- **前端实现**（`frontend/`）：
+  - `src/schemas/payload.ts`：注册 `health.body_sense`（三字段均可空，但**客户端要求体感/围度至少填一项**，避免产生空记录）
+  - `src/services/tracking.ts`：`body_sense` 打卡 → 发出 `health.body_sense` 漏斗步（薄肌王链路补齐）
+  - 打卡页由注册表自动渲染，无需单独页面；health 属敏感域，仍走 `recordEvent` 加密写入
+  - 看板近期记录改显示类型中文名（不再露 `body_sense` 英文 key）
+- **评分**：`body_sense` 不参与 §5.1 评分（无对应指标），仅作为「体感/围度」漏斗步与身体数据留痕；Phase 3 的体脂趋势/达标计算再消费。
+- **Codex 侧**：零改动（`events.type` 为自由 text、`EventInput.payload` 为自由 dict，`domain` 枚举不变）。
