@@ -2,11 +2,11 @@
 
 > 由「执己 Phase3 自主心跳」每轮覆盖更新。列出需要你（PO）介入的事项：拍板决策、唤醒 Codex/DeepSeek 会话。其余执行类问题由三方在 Aurora KB 自治闭环，不在此列。
 > 格式：🔴 拍板 / 🟡 唤醒 Codex（CloudBase 凭证） / 🟢 唤醒 DeepSeek（前端）。
-> 本轮回合：2026-10-21T22:35+08:00（第 17 轮）。
+> 本轮回合：2026-10-21T23:56+08:00（第 18 轮）。
 
 ## 📌 本轮核验结论（Tech Lead 自治核验）
-- **网络核验（初失败末恢复）**：本轮初 `git fetch origin` 失败（schannel SSL 握手失败），`curl` 空体、Node `https.get` 报 `ETIMEDOUT 198.18.0.174:443`（透明代理出向 HTTPS 暂断）；末次 `git fetch` 成功恢复。可信基线 `origin/main = 21f013e`（本轮心跳提交；`git push` 以快进 `003e30f..21f013e` 被接受，反证 origin 自 003e30f 无新提交介入）。经 `git ls-remote` 权威复验：远端 heads 仅已知 9 条 `feat/*` + `docs/privacy-kb-approval` + `main`（无新增分支），`refs/pull/*/head` 仅 #1–#10（**无 #11+**）→ **无未决 OPEN PR**。
-- **本地可核验项**：当前 checkout = `main`，工作树干净（status 空）。全部 9 条 `feat/*` 据第 16 轮已核验且本轮 ls-remote 复验**全合 main**（`origin/feat/*` 本地远端引用不解析，不作 merge-base 判据，改用 ls-remote 权威核验）。
+- **网络核验（正常）**：本轮 `git fetch origin` 成功（exit 0）。可信基线 `origin/main = 2bfede73b639c1be5224d7eb5b872c7d0192ff80`，本地 `main` 同步、工作树干净。经 `git ls-remote` 权威复验：远端 heads 仅已知 9 条 `feat/*` + `docs/privacy-kb-approval` + `main`（无新增分支），`refs/pull/*/head` 仅 #1–#10（**无 #11+**）→ **无未决 OPEN PR**。全部 10 条 feat/* 经 merge-base 核验**全合 main**。
+- 第 17 轮末本文件所记 `origin/main = 8fc5048` 已校正为权威值 `2bfede7`（该轮末经多次 ff 推送，ls-remote 现为准）。
 - A 类全闭环（A1–A6 = Codex PR#9；A2/A7/A8 + plans/diagnostics/body_sense = DeepSeek PR#4/#6/#7/#8），B 类全闭环（B1–B5 + ADR-006 隐私裁定 PR#10）。
 - `FERNET_ENCRYPTION_KEY`：据 `integration-checkpoint-20261021.md` L131 核对，控制台已恢复配置；但**恢复后 health/dating 加密读写 E2E 仍未复测**（本地无新 PR/证据，需应用侧测试用户登录态，控制台登录态不可替代）。
 
@@ -24,4 +24,4 @@
 > **DeepSeek 当前无任何待办。** 前端链路（A2/A7/A8/plans/diagnostics/body_sense）已全部合入 main（PR#4/#6/#7/#8），B5=A 已落地。无需唤醒。
 
 ## 本轮结论
-**`origin/main = 8fc5048`（第 17 轮心跳修正提交；初 `21f013e`、修正 `8fc5048`，`git push` 以快进 `003e30f..8fc5048` 被接受，反证 origin 自 003e30f 无新提交介入；经 `git ls-remote` 复验 `refs/pull` 仅 #1–#10，无 #11+ 与未决 OPEN PR）。** A/B 类全闭环，9 条 `feat/*` 全合 main。剩余唯一活项：**🟡 唤醒 Codex 执行 health/dating 加密读写 E2E** ——需你（PO）在前端用测试账号保持登录驱动真实用户路径，Codex 做服务端密文/解密/RLS 隔离核验（directive 已派发）。token 边界：仅前端↔Codex，不经 Tech Lead。心跳每轮刷新本文件。
+**`origin/main = 2bfede7`（git fetch 成功；ls-remote 权威核验无新增分支、refs/pull 仅 #1–#10，无未决 OPEN PR；10 条 feat/* 全合 main）。** A/B 类全闭环。剩余唯一活项：**🟡 唤醒 Codex 执行 health/dating 加密读写 E2E** ——需你（PO）在前端用测试账号保持登录驱动真实用户路径，Codex 做服务端密文/解密/RLS 隔离核验（directive 已派发）。token 边界：仅前端↔Codex，不经 Tech Lead。本轮无新增拍板/待办，心跳每轮刷新本文件。
