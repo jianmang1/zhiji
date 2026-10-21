@@ -1,6 +1,5 @@
 import base64
 import json
-from uuid import UUID
 
 
 class AuthenticationError(ValueError):
@@ -29,7 +28,7 @@ def user_id_from_token(token: str) -> str:
             raise TypeError("JWT claims must be an object")
         if claims.get("role") != "authenticated":
             raise ValueError("not an authenticated user token")
-        return str(UUID(claims["sub"]))
+        return str(claims["sub"])
     except (ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
         raise AuthenticationError(
             "A valid authenticated CloudBase user token is required"

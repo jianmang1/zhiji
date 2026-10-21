@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     created_at      timestamptz NOT NULL DEFAULT now()
 );
 
--- 3) RLS（与现有表一致：仅本人可读写；云函数 service_role 越权聚合）
+-- 3) RLS：仅本人可读写；auth.uid() returns text in CloudBase PG, cast to UUID.
 ALTER TABLE public.analytics_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles       ENABLE ROW LEVEL SECURITY;
 
@@ -38,15 +38,15 @@ DROP POLICY IF EXISTS analytics_events_owner ON public.analytics_events;
 CREATE POLICY analytics_events_owner
     ON public.analytics_events
     FOR ALL
-    USING (user_id = auth.uid())
-    WITH CHECK (user_id = auth.uid());
+    USING (user_id = auth.uid()::uuid)
+    WITH CHECK (user_id = auth.uid()::uuid);
 
 DROP POLICY IF EXISTS profiles_owner ON public.profiles;
 CREATE POLICY profiles_owner
     ON public.profiles
     FOR ALL
-    USING (user_id = auth.uid())
-    WITH CHECK (user_id = auth.uid());
+    USING (user_id = auth.uid()::uuid)
+    WITH CHECK (user_id = auth.uid()::uuid);
 
 GRANT ALL ON public.analytics_events TO authenticated;
 GRANT ALL ON public.profiles       TO authenticated;
