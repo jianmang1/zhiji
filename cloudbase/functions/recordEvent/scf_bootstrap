@@ -1,3 +1,5 @@
 #!/bin/bash
-export PYTHONPATH="./third_party:$PYTHONPATH"
+# Deps may come from a vendored ./third_party (build without --skip-deps) OR a
+# CloudBase Layer mounted at /opt. Include both so imports never fail at startup.
+export PYTHONPATH="./third_party:/opt:/opt/python/lib/python3.11/site-packages:$PYTHONPATH"
 exec /var/lang/python311/bin/python3.11 main.py
