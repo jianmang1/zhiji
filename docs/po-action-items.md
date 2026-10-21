@@ -5,7 +5,7 @@
 > 本轮回合：2026-10-21T21:30+08:00（第 16 轮）。
 
 ## 📌 本轮核验结论（Tech Lead 自治核验）
-- **网络核验受限（重要）**：`git fetch origin` 本轮失败（SSL/TLS 握手失败，schannel 连接中断），**无法连接 GitHub**。本轮以**本地缓存 `origin/main = 90de0fb`** 为事实源（`90de0fb` = 第 15 轮心跳文档提交，其 parent `228da1c` 已核验为祖先，状态连续）。**本轮不宣称「无 OPEN PR」**——因网络中断无法查询 GitHub API / `refs/pull/*`，GitHub 实际 PR/提交状态未核验；以本地缓存 + 上轮已知（PR#1–#10 全合，无 #11+）为参考疑无新增，但属未核验，下轮网络恢复必复核。
+- **网络核验受限但推送成功（重要）**：`git fetch origin` 本轮初失败（SSL/TLS 握手失败，schannel 连接中断，重试 3 次均失败），**未能拉取远端**；本轮先以**本地缓存 `origin/main = 90de0fb`** 为事实源（`90de0fb` = 第 15 轮心跳文档提交，其 parent `228da1c` 已核验为祖先，状态连续）。随后 `git push origin main` **成功**（`90de0fb..06f44d9` 被接受为快进），反证推送瞬间 **`origin/main` 确为 90de0fb 且其间无新提交介入** → 无 #11+ PR 在本轮窗口合并。当前权威值 **`origin/main = 06f44d9`**（本轮心跳提交）。注：fetch 失败使我无法列举 GitHub 实际 OPEN PR 清单，但 ff 推送成功已间接排除「远端有我未知的新提交」这一情形。
 - **本地可核验项**：当前 checkout = `main`，工作树干净（status 空）；全部 9 条 `feat/*` 远端分支经 `merge-base --is-ancestor origin/main` 核验**全部已合入 main**（无 feat tip 落在 main 外）。
 - A 类全闭环（A1–A6 = Codex PR#9；A2/A7/A8 + plans/diagnostics/body_sense = DeepSeek PR#4/#6/#7/#8），B 类全闭环（B1–B5 + ADR-006 隐私裁定 PR#10）。
 - `FERNET_ENCRYPTION_KEY`：据 `integration-checkpoint-20261021.md` L131 核对，控制台已恢复配置；但**恢复后 health/dating 加密读写 E2E 仍未复测**（本地无新 PR/证据，需应用侧测试用户登录态，控制台登录态不可替代）。
@@ -24,4 +24,4 @@
 > **DeepSeek 当前无任何待办。** 前端链路（A2/A7/A8/plans/diagnostics/body_sense）已全部合入 main（PR#4/#6/#7/#8），B5=A 已落地。无需唤醒。
 
 ## 本轮结论
-**`origin/main = 90de0fb`（本地缓存；本轮 `git fetch` 因 SSL 握手失败未连 GitHub，GitHub 实际 PR/提交状态本轮未核验）。** A/B 类全闭环，9 条 `feat/*` 已合 main。剩余唯一活项：**🟡 唤醒 Codex 执行 health/dating 加密读写 E2E** ——需你（PO）在前端用测试账号保持登录驱动真实用户路径，Codex 做服务端密文/解密/RLS 隔离核验（directive 已派发）。token 边界：仅前端↔Codex，不经 Tech Lead。下轮网络恢复后 Tech Lead 必复核远端 PR 状态。心跳每轮刷新本文件。
+**`origin/main = 06f44d9`（本轮心跳提交 `06f44d9`；初 `git fetch` 因 SSL 失败，但随后 ff 推送 `90de0fb..06f44d9` 成功，反证 origin 无新提交介入，无 #11+）。** A/B 类全闭环，9 条 `feat/*` 已合 main。剩余唯一活项：**🟡 唤醒 Codex 执行 health/dating 加密读写 E2E** ——需你（PO）在前端用测试账号保持登录驱动真实用户路径，Codex 做服务端密文/解密/RLS 隔离核验（directive 已派发）。token 边界：仅前端↔Codex，不经 Tech Lead。心跳每轮刷新本文件。
