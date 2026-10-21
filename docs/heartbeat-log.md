@@ -284,3 +284,38 @@ A2 实现要点：
 
 ### 证据
 分支 `feat/frontend-plans`；`tsc`=0；`vitest`=0（16 文件 / 111 用例）；`taro build` weapp=0 / h5=0；覆盖率 行 85.59%。
+---
+
+## 2026-10-21 · 第 4 轮（DeepSeek · 前端）— 配合 Codex A1/A3/A4/A5/A6
+
+### 输入
+PO 指示：**A1 / A3 / A4 / A5 / A6 + CLI 复测补耗时** 由 **Codex** 执行。
+按 `tech-lead-autonomous-sprint-20261020.md` §1 边界，这六项归属 Codex（`cloudbase/` + 部署/环境），
+**我不碰 `cloudbase/`、不代做部署**；本轮只做"等 A6 端点期间的可用性准备"与需求登记。
+
+### 我这侧需要的交接物（请 Codex 落地后写进 KB）
+| 来自 | 需要什么 | 为什么 |
+|---|---|---|
+| **A6** 公网部署 | 4 个函数的**可访问基址**（或绑定后的访问路径规则） | 当前实测 `zhiji-…service.tcloudbase.com` 主机有效但 `/`、`/recordEvent`、`/api/recordEvent` 等全部 `404 INVALID_PATH`；没有基址，health/dating 打卡与 generatePlan 无法真验 |
+| **A1** getFunnel 增强 | 若新增响应字段（`channel_quality` / 趋势序列 / A/B 维度），请**同步更新契约 §8 并写明字段名与单位** | 我只按契约写适配器；契约没写的字段我不猜。适配器对未知字段是宽容的（忽略不报错），可无痛扩展 |
+| **A3** CLS 日志 | 联调失败时的可查入口（日志或替代诊断） | 现在我只能看到 HTTP 状态码；函数内部报错不可见 |
+| **A4** AI 降级 | 明确**降级码/字段**（契约或响应体） | 我才能把 UI 提示写成"AI 额度不足，稍后再试"，而不是泛化错误 |
+| **A5** cohort | 无（Phase 3，我不做） | — |
+
+> **CLI 复测补耗时**属门禁 7（API P95 < 300ms）的**后端**度量，归 Codex 的 CLI 复测；
+> 前端只上报**真实**体验样本（`load_ms` / `entry_ms`，见 A7），**不会伪造耗时数字**。
+
+### 本轮我做的（前端可用性准备，不依赖 A6 完成）
+1. `services/events.ts`：新增 `HttpFunctionError` + `describeHttpFailure()`，
+   把失败分成 **路径未绑定(404 INVALID_PATH) / 未登录(401,403) / 服务异常(5xx) / 业务错误(4xx message)**，
+   并在文案里给出可操作下一步（例如"请在 CloudBase 绑定 HTTP 访问路径，或核对 base URL"）。
+   目的：A6 绑好路径后，能**一眼分辨**是端点问题还是登录问题，不用猜。
+2. `frontend/.env.example`：三个构建期变量 + 取值说明。
+3. README「端点配置与排错」小节：现象 → 含义 → 下一步对照表。
+
+### 未做（继续等裁决）
+- `health.body_sense`（ADR-005 仍 Proposed）、`work.retain`（口径未定）、`listPlans`（契约未提供）。
+- 真实 E2E：等 A6 基址 + 真实登录 token。
+
+### 证据
+分支 `feat/frontend-diagnostics`（栈在 `feat/frontend-plans` / PR #6 之上）。
