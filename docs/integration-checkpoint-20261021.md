@@ -76,3 +76,56 @@ CloudBase Python 3.11 四个 HTTP 云函数已修复 Layer 导入路径并部署
 - CLS 查询仍返回 `ResourceNotFound.TopicNotExist`，环境尚无日志 Topic；未创建或启用日志资源。
 - 本次尝试用 CLI 重新调用 `listEvents` 时，CLI 在约 20.3 秒后返回 `NETWORK_ERROR`，没有收到函数响应；该次尝试不作为云函数调用证据，也没有写入测试数据。
 - 需在 CLI 网络可达时重新执行上述四函数与双用户隔离调用，并保存每次的 HTTP 状态、脱敏后的完整响应体和实测耗时，才能补齐耗时及未留存的完整响应字段。当前 E2E2 通过结论维持不变，逐请求时延证据标为**待补**。
+
+## Phase 3 复测与 A 项执行证据 · 2026-10-21
+
+以下为本次 CLI/HTTP 网关直接调用与函数部署回执。HTTP 调用使用重新登录的两个 smoke 测试账号之一的当前 CloudBase access token；不在文档记录账号凭据、token 或用户标识。耗时由本机 `Stopwatch` 测量，包含 HTTP 网关往返时间。
+
+### A1 · getFunnel 聚合增强
+
+- 新增 `analytics_events.experiment_id`（NULL 表示非实验事件）及 `(experiment_id, variant, ts)` 部分索引；migration `20261021120000_analytics_experiments` 已在 CloudBase PostgreSQL 成功应用。
+- 渠道质量使用 acquisition→activation 计数和比例；趋势以 UTC 日期与 step 分组；A/B 以 `experiment_id` + `variant` 分组。结果继续使用调用者 JWT/RLS 范围。
+- 本地：`python -m pytest cloudbase/tests -q` → **25 passed**；`git diff --check` 通过。
+- 公开 HTTPS 路由 `POST /getFunnel`，请求范围 `2026-10-20T00:00:00Z` 至 `2026-10-22T00:00:00Z`，domain=`product`：**HTTP 200，738 ms**。响应：
+
+```json
+{"steps":[{"step":"product.acquire","count":0,"conv_rate":1.0,"drop_off":0.0},{"step":"product.activate","count":0,"conv_rate":0.0,"drop_off":0.0},{"step":"product.retain","count":0,"conv_rate":0.0,"drop_off":0.0},{"step":"product.habit","count":0,"conv_rate":0.0,"drop_off":0.0},{"step":"product.value","count":0,"conv_rate":0.0,"drop_off":0.0},{"step":"product.refer","count":0,"conv_rate":0.0,"drop_off":0.0},{"step":"product.reactive","count":0,"conv_rate":null,"drop_off":null}],"bottleneck_step":"product.activate","channel_quality":[],"trend":[],"experiments":[]}
+```
+
+### A3 · CLS
+
+- CloudBase `CreateEnvResource(Resources=["log"])` 已接受，随后环境元数据提供日志集 `tcb-logset-zhiji-d3gd1k9j43e7c20ac`、Topic `tcb-topic-zhiji-d3gd1k9j43e7c20ac`；保留期 7 天，计费模式 `payg`。
+- 四个 HTTP 函数均已配置并绑定该 Topic。CLI `tcb logs search` 已可查询 `getFunnel` 调用，能读到 `status_code=200` 与运行时长记录；此前 `LOG_SERVICE_NOT_ENABLED` 已消除。
+
+### A4 · generatePlan AI 降级
+
+- AI 不可用/未配置或模型输出不合 schema 时，使用规则内容写入方案，并返回 HTTP 201、`ai_enabled:false` 与完整 `content`；成功使用 AI 时返回 `ai_enabled:true`。
+- CLI 本地测试：25 项通过，其中含 AI 网关不可用、模型 schema 无效的规则降级测试。
+- 线上降级复测：仅临时清空 `generatePlan` 的 provider/model 配置后部署并调用，再恢复配置并重新部署。返回 **HTTP 201，703 ms**，`ai_enabled:false`，content 含有效 summary 与 2 条 actions；生成方案已 HTTP 204 清理。恢复部署成功。
+- 正常 AI 路径实测：**HTTP 201，16,153 ms**，返回 `{"id":"26c9ace5-3997-4cf5-9cf2-661c08a741e8","ai_enabled":true}`；方案已 HTTP 204 清理。
+
+### A5 · cohort 权限
+
+- 新增 `docs/adr/ADR-006-cohort-permission.md`（Proposed）：保持当前调用者 JWT/RLS；ADR 获批前不实现跨用户聚合、不使用 `service_role`；列明管理员授权、最小样本数、维度/范围和反推风险待裁定项。
+
+### A6 · 公网路由
+
+- 已通过 CloudBase 默认 HTTPS 域名建立四函数路径：
+  - `https://zhiji-d3gd1k9j43e7c20ac-1510872056.ap-shanghai.app.tcloudbase.com/recordEvent`
+  - `/listEvents`、`/generatePlan`、`/getFunnel`
+- 路由层匿名开关未启用；函数仍要求有效 Bearer access token。有效 JWT 下的 `getFunnel` 实测为 HTTP 200；无效/缺失 token 返回 HTTP 401。
+
+### 事件写入/查询 CLI 复测与耗时
+
+工作域一次性 smoke 事件通过公开 URL 写入、读回，并清理：
+
+| 调用 | HTTP | 实测耗时 | 脱敏响应证据 |
+|---|---:|---:|---|
+| `recordEvent` | 201 | 801 ms | `{"id":6}` |
+| `listEvents` | 200 | 501 ms | 返回同一事件，`domain=work`、`type=log_spending`、`source=codex-cli-retest`；响应含原始 payload 和时间戳 |
+| 删除 smoke 事件 | 204 | 未单独计时 | 已清理 |
+
+### 部署配置注意项
+
+- 本轮重部署后 `TCB_ENV_ID` 已显式设为当前 CloudBase 环境，避免未解析变量导致函数 500。
+- **待恢复密钥**：部署详情确认 `FERNET_ENCRYPTION_KEY` 当前为空；本地无可恢复的原 Fernet 密钥。work 域 E2E 不依赖该值，但 health/dating 写入加密会失败，故本轮没有对敏感域做写入复测，也没有生成新密钥以免使历史密文不可读。需环境负责人在 CloudBase 函数环境变量中恢复原密钥，再部署/验证 `recordEvent` 与 `listEvents` 的 health/dating 闭环。

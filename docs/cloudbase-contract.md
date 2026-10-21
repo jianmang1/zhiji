@@ -90,8 +90,8 @@
 | `recordEvent` | payload（domain,type,ts,payload,source） | 注入 user_id=auth.uid() 插入 events | 新事件 id | **已实现（E2E2 验证通过，见 [集成检查点](integration-checkpoint-20261021.md)）** |
 | `listEvents` | domain?, range? | 按当前用户查 events（+tags） | 事件列表 | **已实现（E2E2 验证通过，见 [集成检查点](integration-checkpoint-20261021.md)）** |
 | `upsertGoal` / `listGoals` | goal 字段 / — | 目标增查；读写必须遵守当前用户 RLS | 目标 | **未提供云函数**；客户端已有 `selectGoals` RDB 查询，目标写入端点未实现 |
-| `generatePlan` | based_on（含 domain 与查询范围） | 以滚动 7 天 events 镜像前端规则引擎算 score/tier；LLM 生成摘要、行动和里程碑后写 plans | 新方案 id | **已实现（E2E2 验证通过，见 [集成检查点](integration-checkpoint-20261021.md)）** |
-| `getFunnel` | domain?（默认 product）, range{from,to}, segment? | 在当前用户 RLS 可见的 analytics_events 中按 step 聚合，并以本人 profile 补充分群维度 | steps, bottleneck_step, segment? | **已实现（E2E2 验证通过，见 [集成检查点](integration-checkpoint-20261021.md)）** |
+| `generatePlan` | based_on（含 domain 与查询范围） | 以滚动 7 天 events 镜像前端规则引擎算 score/tier；LLM 生成摘要、行动和里程碑后写 plans；AI 未配置或不可用时写入规则兜底并返回 `ai_enabled:false` | 新方案 id；降级时附 `content` | **已实现（E2E2 验证通过；AI 降级见 Phase 3 checkpoint）** |
+| `getFunnel` | domain?（默认 product）, range{from,to}, segment? | 在当前用户 RLS 可见的 analytics_events 中按 step 聚合，并以本人 profile 补充分群维度；返回渠道质量、日趋势及 experiment/variant 拆分 | steps, bottleneck_step, channel_quality, trend, experiments, segment? | **已实现（E2E2 验证通过；Phase 3 增强见 checkpoint）** |
 | `listPlans` | — | 按当前用户查 plans | 方案列表 | **未提供云函数**；页面仍为占位，尚未接入读取 |
 
 > 非敏感数据的高频读写可由前端直接 `cloud.rdb()` 完成（受 RLS）。**health/dating 敏感事件必须通过 `recordEvent` 写入、通过 `listEvents` 读取**，由云函数负责加密和解密 payload；不得由客户端直接写入或读取敏感事件 payload。复杂聚合与 AI 分析走云函数。
@@ -115,6 +115,7 @@ LLM 产出的 `plans.content` 必须符合以下 JSON 结构（三王通用，Co
 
 - `score`/`tier` 由规则引擎算好后传入，LLM 仅生成 `summary`/`actions`/`next_milestone`，避免 LLM 编造分数。
 - `actions` 数组长度建议 2–4 条，按 `effort` 升序，确保"从认知到执行"可落地。
+- AI provider/model 未配置、AI 请求失败或模型输出不符合 schema 时，仍按 2xx 创建规则兜底方案。响应包含 `ai_enabled:false` 与 `content`（符合上方 schema），`generated_by` 为 `rules-fallback`；正常 AI 响应为 `ai_enabled:true`。
 
 ## 6. 图分析（环路检测等）
 
@@ -142,6 +143,7 @@ LLM 产出的 `plans.content` 必须符合以下 JSON 结构（三王通用，Co
 | region | text | | 地域（省/市，可选） |
 | user_type | text | | `new`/`returning`；dating 域可加 `gender` |
 | variant | text | | A/B 实验分组（Phase 3） |
+| experiment_id | text | NULL 表示非实验事件 | A/B 实验标识（Phase 3） |
 | payload | jsonb | NOT NULL DEFAULT '{}' | 扩展：如 spending `{category, amount}` |
 | ts | timestamptz | NOT NULL DEFAULT now() | |
 
@@ -173,6 +175,8 @@ LLM 产出的 `plans.content` 必须符合以下 JSON 结构（三王通用，Co
 ### 云函数
 - `trackAnalytics`：前端直接 `cloud.rdb()` 写 `analytics_events`（非敏感，受 RLS）；无需云函数。
 - `getFunnel(domain?, range, segment?)`：当前版本每次请求聚合一个漏斗（默认产品级 `product.*`，或 `dating.*`/`health.*`/`work.*`），输出各步事件数、相邻步转化率/drop-off/瓶颈步；`product.reactive` 单独计数。segment 优先使用埋点字段，缺失时回退到调用者自己的 `profiles` 字段。函数使用调用者 JWT，不使用 `service_role`，因此结果严格限于当前用户可见事件；跨用户 cohort 聚合仍属后续 ADR/权限设计范围。前端看板可分别请求产品级和各王级结果。
+
+Phase 3 增强字段：`channel_quality` 按渠道返回 acquisition→activation 事件数及转化比例（health/work/dating 使用 onboard→第二步）；`trend` 返回按 UTC 日期与 step 汇总的事件数；`experiments` 按 `experiment_id`/`variant` 返回各步计数。以上均使用同一 RLS 可见事件集，样本不足时仍返回原始计数，渠道转化率在 acquisition 计数为 0 时为 `null`。`conv_rate` 与 `drop_off` 均为 0–1 比例。
 
 ### RLS
 `analytics_events` / `profiles` 同 §4：`ENABLE RLS`，策略 `USING (user_id = auth.uid()::text)`；云函数使用调用者 JWT，不使用 `service_role`，聚合结果仅包含调用者可见数据。

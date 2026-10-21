@@ -81,6 +81,29 @@ def _decode_model_result(
         raise CloudBaseError("CloudBase returned invalid plan output") from exc
 
 
+def _fallback_plan(score: dict[str, Any]) -> dict[str, Any]:
+    domain_actions = {
+        "health": [
+            {"title": "选择一个健康习惯连续记录 3 天", "why": "先用稳定记录建立可观察的节奏", "effort": "low"},
+            {"title": "为下周安排一次短时训练", "why": "把行动拆成容易开始的一步", "effort": "mid"},
+        ],
+        "work": [
+            {"title": "记录下一次工作时段", "why": "补充稳定数据，便于复盘投入", "effort": "low"},
+            {"title": "为本周选定一个优先任务", "why": "减少分散，推进一项可完成的结果", "effort": "mid"},
+        ],
+        "dating": [
+            {"title": "记录一次真实的交流感受", "why": "先观察互动体验，不急于下结论", "effort": "low"},
+            {"title": "安排一次轻松、明确的交流", "why": "用小步行动积累可复盘的经验", "effort": "mid"},
+        ],
+    }
+    return {
+        **score,
+        "summary": f"当前得分为 {score['score']}，段位为{score['tier']}。AI 暂不可用，以下是基于规则的通用建议。",
+        "actions": domain_actions[score["domain"]],
+        "next_milestone": "持续记录 7 天后再复盘变化",
+    }
+
+
 def dispatch(
     operation: str,
     body: Any,
@@ -148,25 +171,30 @@ def dispatch(
                         {**row, "payload": decrypt_payload(domain, payload)}
                     )
                 score = score_domain(based_on["domain"], weekly_events, now)
-                response = gateway.complete_chat(
-                    llm_model(),
-                    [
-                        {"role": "system", "content": SYSTEM_PROMPT},
-                        {
-                            "role": "user",
-                            "content": json.dumps(
-                                {
-                                    "based_on": based_on,
-                                    "score": score,
-                                    "events": events,
-                                },
-                                ensure_ascii=False,
-                                separators=(",", ":"),
-                            ),
-                        },
-                    ],
-                )
-                content, model = _decode_model_result(response, score)
+                ai_enabled = True
+                try:
+                    response = gateway.complete_chat(
+                        llm_model(),
+                        [
+                            {"role": "system", "content": SYSTEM_PROMPT},
+                            {
+                                "role": "user",
+                                "content": json.dumps(
+                                    {
+                                        "based_on": based_on,
+                                        "score": score,
+                                        "events": events,
+                                    },
+                                    ensure_ascii=False,
+                                    separators=(",", ":"),
+                                ),
+                            },
+                        ],
+                    )
+                    content, model = _decode_model_result(response, score)
+                except (CloudBaseError, RuntimeError):
+                    ai_enabled = False
+                    content, model = _fallback_plan(score), "rules-fallback"
                 title = {
                     "health": "薄肌王",
                     "work": "力王",
@@ -187,7 +215,11 @@ def dispatch(
                         "content": content,
                     }
                 )
-            return 201, {"id": plan_id}
+            return 201, {
+                "id": plan_id,
+                "ai_enabled": ai_enabled,
+                **({"content": content} if not ai_enabled else {}),
+            }
 
         if operation == "getFunnel":
             funnel_request = GetFunnelInput.model_validate(body)
