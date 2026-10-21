@@ -345,3 +345,74 @@ PO 裁定 **ADR-005 = A**（约束已解除，立即实现）。契约已由 Tec
 
 ### 证据
 `tsc`=0；`vitest`=0（17 文件 / 122 用例）；`taro build` weapp=0（35.91s）/ h5=0（15.02s）；覆盖率 行 86.21%。
+
+## 2026-10-21T15:46+08:00 · Tech Lead 自主心跳（第 8 轮 · 远端核验修正 + 派发）
+
+> 注：本文件当前分支（feat/frontend-body-sense）仅含至第 5 轮（DeepSeek）段；Tech Lead 第 1–7 轮段写于其他分支 WIP（保现场模式，未随 checkout 转移）。本轮在现存末尾续写。
+
+### 1. 工具与远端核验
+- `git fetch origin` **失败**（sandbox 网络 `Recv failure: Connection was reset`，重试 3 次均失败）。改用 **GitHub API 作权威远端事实源**交叉核验，结论与本地缓存 `origin/*` 一致：
+  - `origin/main = 351b5ad`（2026-10-21T04:20:33Z，未变，与第 5/6/7 轮同值）。
+  - **现存 4 个 OPEN PR**（此前第 5/6/7 轮基于本地 `merge-base` 判定「无 OPEN PR」属误判——当时仅查了 feat/* 是否已是 main 祖先，未查 GitHub 实际 PR 状态）：
+    - **#8** `feat/frontend-body-sense`(35cf581) → `feat/frontend-diagnostics`(0244c91)：落地 ADR-005 方案 A（health.body_sense，即 PO 已采纳的 B5=A）。
+    - **#7** `feat/frontend-diagnostics`(0244c91) → `feat/frontend-plans`(b82f956)：端点失败诊断分级 + .env.example（配合 Codex A6）。
+    - **#6** `feat/frontend-plans`(b82f956) → `main`(351b5ad)：/plans 接入 generatePlan（契约已标「已实现」）。
+    - **#4** `feat/frontend-a7a8`(ea534e3) → `feat/frontend-phase3`(89f276b)：Phase 3 A7/A8（其 head 已是 main 祖先，内容随 351b5ad 入 main，但 base 分支未变故 GitHub 未自动关闭）。
+- 修正：第 5/6/7 轮「无 OPEN PR」结论作废，以本轮回合 GitHub API 为准。
+
+### 2. 前端链（#6/#7/#8）合并可行性核验 → 暂停，不合并
+- 3-way `merge-base(main=351b5ad, body-sense=35cf581) = ea534e3`（A8），确认 main **不是** body-sense 的祖先（FF 不可行，真合并）。
+- 2-way 差异 `main..body-sense` 显示该链**改动 cloudbase/ 后端文件**（相对 main 删 ~1144 行：funnel.py / handlers.py / score_engine.py / gateway.py / auth.py / build_functions.py / cloudbaserc.json / 迁移 / ADR-004 等）。说明该前端链在其历史中对 backend 目录做了实质改动，与 main 的 backend 状态（b51c386 起即含后端四函数 + 00c9102 文档回填）存在分叉。
+- 结论：**合并会冲突或回退已部署后端**，属「冲突/不确定」情形 → 依硬约束暂停，**不强合并、不 push**。前端测试本身健康（`vitest run` = 17 文件 / 122 用例 / 0 失败，exit 0，于 35cf581 跑通）。
+- 处置：派发 DeepSeek 会话——将前端链（plans→diagnostics→body-sense）**rebase 到当前 main(351b5ad) 之上**，先解决 cloudbase/ 分叉（要么彻底不碰 cloudbase/，要么显式对齐），再提可干净合入 main 的 PR，由 Tech Lead 走门禁合并。
+
+### 3. Codex 本地后端分支 feat/phase3-a1-a6（85a8153）→ 未达标，不判完成
+- 本轮新发现**本地独有分支**（无 origin、无 PR、非 main 祖先）：单提交 `85a8153 feat(phase3): deliver funnel, fallback, observability, and routes`。
+- 含 A1–A6 尝试：funnel.py（新增渠道质量/趋势/A-B）、handlers 改动、cloudbaserc、ADR-006（Proposed）、契约 §5 更新、以及**大幅扩展的 integration-checkpoint**（声称 CLS Topic 已建、公网路由可用、AI 降级实测 703ms/16,153ms 等实测时延）。
+- 门禁核验：**只有提交哈希，无远端分支、无 PR、无独立可复现日志** → 依防虚报门禁**一律不判完成、不可合并**。其 checkpoint 的强实测声明（A3 CLS 已配、A6 公网路由、A4 时延）须由 Codex 在已登录 CloudBase 会话提供可核验证据（远端 git ls-tree + 可复现 CLI/HTTP 日志），Tech Lead 不预认证。
+- 处置：派发 Codex 会话——push `feat/phase3-a1-a6` → 开 PR → 提供可复现 build/test 日志 + CloudBase 实测证据；checkpoint 实测声明须与真实 CLI/HTTP 日志一致，禁止估算/伪造。
+
+### 4. 工作树保护
+- 当前 checkout = `feat/frontend-body-sense`，含既有未提交 WIP（cloudbase/ 后端改动 + 未提交 KB 文档）。本轮**只读核验 + 追加 KB 文档**，**未 stash / 未合并 / 未提交 / 未 push 任何代码 WIP**；`vitest` 未污染受跟踪文件。
+
+### 5. 本轮结论
+- 修正第 5/6/7 轮「无 OPEN PR」误判：远端现存 **4 个 OPEN PR**（#4/#6/#7/#8）。
+- 前端链（含 PO 已采纳的 B5=A body_sense）因 cloudbase/ 分叉**不可直接合并**，交 DeepSeek rebase 后再合。
+- Codex 后端 a1-a6 分支为本地独有、门禁未达标，交 Codex push+PR+证据后再审。
+- 本轮回合不产生合并动作；待 PO 处理清单见 `docs/po-action-items.md`（第 8 轮）。
+
+---
+
+## 2026-10-21T15:55+08:00 · Tech Lead 自主心跳（第 9 轮 · 合并 PR#8 + 修正第 8 轮误判）
+
+### 0. 第 8 轮误判修正（重要）
+- 第 8 轮判定「前端链含 `cloudbase/` 分叉、不可合并、交 DeepSeek rebase」**属误判**，根因已定位：
+  当时读取的 `main..body-sense` 差异混入了**当前工作树未提交的 Codex 后端代码泄漏**（getFunnel/funnel.py/score_engine.py 等），并非 PR#8 提交内容。
+- 事实核验（`git diff --stat origin/main...origin/feat/frontend-body-sense`）：PR#8 仅含 `frontend/` + `docs/`，**0 个 `cloudbase/` 文件**。PR#8 是 main 的干净真合并候选，无后端分叉。
+- 故第 8 轮「暂停合并 / 派 DeepSeek rebase」指令作废；相应误判已在本轮纠正并完成合并。
+
+### 1. 本轮回合执行（Tech Lead 签核合并）
+- **合并 PR#8 → `origin/main`**：
+  - `git merge --no-ff origin/feat/frontend-body-sense` → 提交 `68e7d2c`，已 `git push origin main`（351b5ad..68e7d2c）。
+  - 冲突仅 `docs/cloudbase-contract.md` 一处：§5 表 main 已是 E2E2 验证状态列，PR#8 是旧草稿（"待云端联调"）→ **保留 main 版本**；§1 头部同时保留 ADR-004 注 + 新增 v1.5(ADR-005) 注。无内容丢失。
+  - 验证：`tsc --noEmit`=0；`vitest run`=17 文件 / **122 用例全过**。
+- **PR#6(#6 frontend-plans) / PR#7(#7 frontend-diagnostics)** 经 `merge-base --is-ancestor` 核验均为 PR#8(35cf581) 的祖先，内容已随 PR#8 合入 main → **可关闭（superseded）**，无遗留功能缺口。
+- **B5=A（body_sense）已上线 main**：薄肌王"体感/围度"漏斗步可产出（health.body_sense，零迁移，Codex 零改），ADR-005 完整落地。
+
+### 2. 工作树保护 / 数据抢救（防丢失）
+- 合并前发现当前 body-sense 工作树含**未提交混合内容**（Codex 后端泄漏 + 未入库 KB 文档），属数据丢失风险。已 `git stash branch recover/techlead-quarantine-20261021`（提交 `c47909a`）整体保全：
+  - 后端：`cloudbase/functions/getFunnel/`、`src/zhiji_cloudbase/funnel.py`、`score_engine.py` 等（Codex 的 A1/A2 后端尝试）。
+  - KB：`docs/po-action-items.md`、`phase3-backlog.md`、`upgrade-queue.md`、`adr/ADR-004-*.md` 及多份 directive 文档（此前均未入库）。
+  - 分支标记 **DO NOT MERGE**；仅作保全，待 Codex/PO 处置。另一条 `stash@{1}`（DeepSeek `feat/body-sense-checkin` WIP）仍保留。
+- 当前 `main` 工作树干净（status 空）。
+
+### 3. 剩余未闭环（需会话/凭证）
+- **Codex 后端 A1–A6**（getFunnel 聚合增强 / CLS 日志 / generatePlan AI 降级 / cohort 权限 ADR-006 / 公网域名）：需 CloudBase 已登录会话执行 + 提供可复现证据。
+  - 本地独有分支 `feat/phase3-a1-a6`(85a8153) 与恢复分支后端泄漏**同源疑似**，仍**本地无 origin、无 PR、门禁未达标**（仅提交哈希，无远端/日志）→ 不判完成、不可合并。交 Codex：push → 开 PR → 附可复现 build/test + CloudBase 实测（CLI/HTTP 日志），checkpoint 实测声明须与真实日志一致。
+- **KB 文档入库持久化**：除心跳双件（本文件 + po-action-items.md）外，其余 KB 文档仍在 `recover/techlead-quarantine-20261021` 未入 main → 待 PO 批准入库（见下方 🔴）。
+
+### 4. 本轮结论
+- PR#8（B5=A body_sense + plans + diagnostics）已合并 main(`68e7d2c`)，验证通过；第 8 轮"不可合并"误判已纠正。
+- PR#6/#7 可关闭；前端链路全部入 main，DeepSeek 当前**无待办**。
+- Codex 后端工作已保全于恢复分支，A1–A6 仍待 CloudBase 会话 + 证据。
+- 待 PO 处理清单见 `docs/po-action-items.md`（第 9 轮）。
