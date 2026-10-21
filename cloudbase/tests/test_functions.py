@@ -173,6 +173,10 @@ def test_auth_token_validation_rejects_bad_role_and_header():
         user_id_from_token(make_token(role="anon"))
 
 
+def test_user_id_from_token_preserves_numeric_cloudbase_sub():
+    assert user_id_from_token(make_token("2112717453276565505")) == "2112717453276565505"
+
+
 def test_payload_decryption_fails_closed_for_plain_or_corrupt_sensitive_rows():
     with pytest.raises(RuntimeError, match="not encrypted"):
         decrypt_payload("health", {"duration": 8})

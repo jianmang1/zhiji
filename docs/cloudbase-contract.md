@@ -5,12 +5,13 @@
 > Codex（云函数）/ DeepSeek（前端 SDK）均以此文档为准，互不直连。
 >
 > **2026-10-20 更新（v1.4）**：§8 `step` 字段改为**命名空间枚举**（`product.*`/`dating.*`/`health.*`/`work.*`，仅列 v1 步骤，Phase 3 留 TODO），支撑两层漏斗聚合；v1.3 的 §8 分析层（`analytics_events`+`profiles` 表，前向兼容）维持不变。v1.2 冻结项（dating 4 类热点、评分阈值、等级命名、generatePlan schema）维持不变。
+> 注：`user_id` 类型经 ADR-004（2026-10-21）由 `uuid` 改为 `text`。
 
 ## 1. 鉴权模型
 
 - 用户体系由 **CloudBase 内置 auth** 提供（`auth.users` / `auth.tokens`）。
-- 微信登录：前端调 `cloud.auth` 微信登录集成；服务端用 `auth.uid()` 取当前用户 id（uuid）。
-- **不**自建 `users` 表、不签发 JWT；应用表用 `user_id uuid` 关联当前用户，RLS 强制隔离。
+- 微信登录：前端调 `cloud.auth` 微信登录集成；服务端用 `auth.uid()` 取当前用户 id（text）。
+- **不**自建 `users` 表、不签发 JWT；应用表用 `user_id text` 关联当前用户，RLS 强制隔离。
 
 ## 2. 表（public schema）
 
@@ -18,7 +19,7 @@
 | 字段 | 类型 | 约束 | 说明 |
 |------|------|------|------|
 | id | bigint | PK, IDENTITY | 自增 |
-| user_id | uuid | NOT NULL | 当前用户（= auth.uid()） |
+| user_id | text | NOT NULL | 当前用户（= auth.uid()） |
 | domain | text | `CHECK IN ('health','work','dating')` | 三域之一（v1）；capability/interest 后续扩展 |
 | type | text | NOT NULL | 域内事件类型（water/workout/date_session/...） |
 | ts | timestamptz | NOT NULL | 事件发生时间（核心索引） |
@@ -41,7 +42,7 @@
 | 字段 | 类型 | 约束 | 说明 |
 |------|------|------|------|
 | id | uuid | PK, DEFAULT gen_random_uuid() | |
-| user_id | uuid | NOT NULL | |
+| user_id | text | NOT NULL | |
 | title | text | NOT NULL | |
 | domain | text | `CHECK IN ('health','work','dating')` | 关联域（v1 三域） |
 | status | text | DEFAULT 'active', `CHECK IN ('active','done','dropped')` | |
@@ -53,7 +54,7 @@
 | 字段 | 类型 | 约束 | 说明 |
 |------|------|------|------|
 | id | uuid | PK, DEFAULT gen_random_uuid() | |
-| user_id | uuid | NOT NULL | |
+| user_id | text | NOT NULL | |
 | title | text | NOT NULL | |
 | generated_by | text | NOT NULL | 哪个分析模型/Agent |
 | based_on | jsonb | NOT NULL | 引用的事件范围/查询条件（可回溯） |
@@ -78,7 +79,7 @@
 
 ## 4. 行级安全（RLS，每用户隔离）
 
-所有 `public` 表均 `ENABLE ROW LEVEL SECURITY`，策略：`USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid())`。
+所有 `public` 表均 `ENABLE ROW LEVEL SECURITY`，策略：`USING (user_id = auth.uid()::text) WITH CHECK (user_id = auth.uid()::text)`。
 `tags` 经 `event_id` 间接归属当前用户（子查询校验）。
 前端（authenticated 角色）只能读写自己的行。当前云函数也透传调用者的 authenticated access token，因此事件、方案和漏斗结果仍受同一 RLS 策略约束；本项目当前没有启用可绕过 RLS 的 service_role 聚合。
 
@@ -133,7 +134,7 @@ LLM 产出的 `plans.content` 必须符合以下 JSON 结构（三王通用，Co
 | 字段 | 类型 | 约束 | 说明 |
 |------|------|------|------|
 | id | bigint | PK, IDENTITY | |
-| user_id | uuid | NOT NULL | = auth.uid() |
+| user_id | text | NOT NULL | = auth.uid() |
 | name | text | NOT NULL | 原始行为事件：`app_open`/`view_king`/`complete_checkin`/`share`/`reactivate`/`stage_up`/`log_spending`/`set_goal` |
 | step | text | | 漏斗步代码（命名空间枚举，见下）。v1 仅取下列值；Phase 3 扩展留 TODO |
 | domain | text | `CHECK IN ('health','work','dating')` | 关联王（可选） |
@@ -157,7 +158,7 @@ LLM 产出的 `plans.content` 必须符合以下 JSON 结构（三王通用，Co
 ### profiles（用户分群维度，v1 即建）
 | 字段 | 类型 | 约束 | 说明 |
 |------|------|------|------|
-| user_id | uuid | PK, = auth.uid() | |
+| user_id | text | PK, = auth.uid() | |
 | region | text | | 地域 |
 | user_type | text | DEFAULT 'new', `CHECK IN ('new','returning')` | |
 | acquire_channel | text | | 首次获客渠道（渠道质量评估） |
@@ -174,4 +175,4 @@ LLM 产出的 `plans.content` 必须符合以下 JSON 结构（三王通用，Co
 - `getFunnel(domain?, range, segment?)`：当前版本每次请求聚合一个漏斗（默认产品级 `product.*`，或 `dating.*`/`health.*`/`work.*`），输出各步事件数、相邻步转化率/drop-off/瓶颈步；`product.reactive` 单独计数。segment 优先使用埋点字段，缺失时回退到调用者自己的 `profiles` 字段。函数使用调用者 JWT，不使用 `service_role`，因此结果严格限于当前用户可见事件；跨用户 cohort 聚合仍属后续 ADR/权限设计范围。前端看板可分别请求产品级和各王级结果。
 
 ### RLS
-`analytics_events` / `profiles` 同 §4：`ENABLE RLS`，策略 `USING (user_id = auth.uid())`；云函数(service_role) 可越权做分群聚合。
+`analytics_events` / `profiles` 同 §4：`ENABLE RLS`，策略 `USING (user_id = auth.uid()::text)`；云函数使用调用者 JWT，不使用 `service_role`，聚合结果仅包含调用者可见数据。

@@ -1,0 +1,63 @@
+{
+  "version": "2.0",
+  "envId": "zhiji-d3gd1k9j43e7c20ac",
+  "functionRoot": "cloudbase/dist",
+  "functions": [
+    {
+      "name": "recordEvent",
+      "dir": "cloudbase/dist/recordEvent",
+      "type": "HTTP",
+      "runtime": "Python3.11",
+      "timeout": 30,
+      "memorySize": 512,
+      "envVariables": {
+        "TCB_ENV_ID": "{{env.TCB_ENV_ID}}",
+        "FERNET_ENCRYPTION_KEY": "{{env.FERNET_ENCRYPTION_KEY}}",
+        "TCB_AI_PROVIDER": "cloudbase",
+        "TCB_AI_MODEL": "hy3"
+      }
+    },
+    {
+      "name": "listEvents",
+      "dir": "cloudbase/dist/listEvents",
+      "type": "HTTP",
+      "runtime": "Python3.11",
+      "timeout": 30,
+      "memorySize": 512,
+      "envVariables": {
+        "TCB_ENV_ID": "{{env.TCB_ENV_ID}}",
+        "FERNET_ENCRYPTION_KEY": "{{env.FERNET_ENCRYPTION_KEY}}",
+        "TCB_AI_PROVIDER": "cloudbase",
+        "TCB_AI_MODEL": "hy3"
+      }
+    },
+    {
+      "name": "generatePlan",
+      "dir": "cloudbase/dist/generatePlan",
+      "type": "HTTP",
+      "runtime": "Python3.11",
+      "timeout": 30,
+      "memorySize": 512,
+      "envVariables": {
+        "TCB_ENV_ID": "{{env.TCB_ENV_ID}}",
+        "FERNET_ENCRYPTION_KEY": "{{env.FERNET_ENCRYPTION_KEY}}",
+        "TCB_AI_PROVIDER": "cloudbase",
+        "TCB_AI_MODEL": "hy3"
+      }
+    },
+    {
+      "name": "getFunnel",
+      "dir": "cloudbase/dist/getFunnel",
+      "type": "HTTP",
+      "runtime": "Python3.11",
+      "timeout": 30,
+      "memorySize": 512,
+      "envVariables": {
+        "TCB_ENV_ID": "{{env.TCB_ENV_ID}}",
+        "FERNET_ENCRYPTION_KEY": "{{env.FERNET_ENCRYPTION_KEY}}",
+        "TCB_AI_PROVIDER": "cloudbase",
+        "TCB_AI_MODEL": "hy3"
+      }
+    }
+  ]
+}
