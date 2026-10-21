@@ -32,7 +32,12 @@
 - `/login`：调用 `cloud.auth` 微信登录集成 → 存登录态
 - `/entry`：事件录入，按域切换表单（health/work/dating 三王），提交经 `cloud.rdb()` 或 `recordEvent`；dating 4 类热点（approach/date/chat/stage）按契约 §3
 - `/dashboard`：经 `cloud.rdb()` 查 events + goals，渲染三王评分总览 + 趋势 + AI 意见卡（generatePlan）
-- `/funnel`：增长漏斗看板（v1），读 `analytics_events` 渲染三王漏斗（黄毛王 获取→激活→留存→大结果→推荐；薄肌王 饮食→运动和睡眠→体脂→推荐；力王 工资→消费→留存→推荐）并高亮瓶颈步；分群维度 channel/region/user_type 见契约 §8
+- `/funnel`：增长漏斗看板（v1，**前端本地算**）。两层结构（契约 §8 / product-definition §15.1）：
+  - ① 产品级 AARRR：获取→激活→留存→习惯→价值→推荐；`product.reactive`（召回/复活）单独一栏
+  - ② 各王行为漏斗（**v1 步骤，以此为准**）：薄肌王 启动→饮水→睡眠→运动→综合打卡→体感/围度→推荐；力王 启动→收入→支出→留存→推荐；黄毛王 启动→首触→破冰→约见→进阶→脱单→推荐
+  - 瓶颈步 = 单步 drop-off 最大者并高亮；分群维度 `channel` / `region` / `user_type`（契约 §8）
+  - 注：本节此前写的「黄毛王 获取→激活→留存→大结果」「薄肌王 饮食→运动和睡眠→体脂」「力王 工资→消费→留存」是 v1.3 之前的混层口径，已被契约 v1.4 §8 取代（体脂/储蓄等属 Phase 3），**以契约与本节为准**
+- `getFunnel` 接入（Phase 3，签名已冻结于 `docs/agents/codex-dispatch-getfunnel.md`）：云函数返回 `{steps:[{step,count,conv_rate,drop_off}], bottleneck_step, segment?}`；前端本地结构为 `{steps:[{step,label,count,conversionFromPrev,dropOffPct}], bottleneck, overallConversion}`。接入时在 `src/services/funnel.ts` 加一层适配器（`conv_rate`↔`conversionFromPrev`、`drop_off`↔`dropOffPct`、`bottleneck_step`↔`bottleneck`）即可，**页面零改动**
 - `/plans`：**v1 先做占位 UI**；真实数据等 Codex 的 `generatePlan`/`listPlans` 云函数交付后接入（门禁：未标"已实现"不接真实调用）
 
 ## 6. 表单校验（Zod）

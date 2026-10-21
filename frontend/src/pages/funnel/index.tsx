@@ -80,6 +80,25 @@ export default function FunnelPage() {
           ))}
         </View>
 
+        <Text className="funnel__segLabel">地域</Text>
+        <View className="funnel__chips">
+          <View
+            className={`funnel__chip ${!segment.region ? 'funnel__chip--on' : ''}`}
+            onClick={() => update({ region: undefined })}
+          >
+            <Text>全部</Text>
+          </View>
+          {segments.regions.map((region) => (
+            <View
+              key={region}
+              className={`funnel__chip ${segment.region === region ? 'funnel__chip--on' : ''}`}
+              onClick={() => update({ region })}
+            >
+              <Text>{region}</Text>
+            </View>
+          ))}
+        </View>
+
         <Text className="funnel__segLabel">用户类型</Text>
         <View className="funnel__chips">
           <View

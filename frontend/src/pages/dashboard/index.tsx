@@ -137,6 +137,18 @@ export default function DashboardPage() {
         )
       })}
 
+      <View className="dash__ai">
+        <View className="dash__aiHead">
+          <Text className="dash__aiTitle">AI 意见</Text>
+          <Text className="dash__aiBadge">待 generatePlan</Text>
+        </View>
+        <Text className="dash__aiText">
+          generatePlan 云函数还没在契约里标「已实现」，按门禁不接真实调用，这里不编造建议。
+          接入后展示本周 summary、2–4 条 actions（含 why 与 effort）和 next_milestone；
+          score / tier 由本地规则引擎算好传入，LLM 只写文字。
+        </Text>
+      </View>
+
       <View className="dash__recent">
         <View className="dash__recentHead">
           <Text className="dash__recentTitle">近期记录</Text>
