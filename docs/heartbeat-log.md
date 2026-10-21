@@ -319,3 +319,29 @@ PO 指示：**A1 / A3 / A4 / A5 / A6 + CLI 复测补耗时** 由 **Codex** 执�
 
 ### 证据
 分支 `feat/frontend-diagnostics`（栈在 `feat/frontend-plans` / PR #6 之上）。
+---
+
+## 2026-10-21 · 第 5 轮（DeepSeek · 前端）— 落地 ADR-005 方案 A（body_sense）
+
+### 输入
+PO 裁定 **ADR-005 = A**（约束已解除，立即实现）。契约已由 Tech Lead 升 **v1.5**，
+§3 health 增加 `body_sense{waist_cm?, feel?, note?}`。
+
+### 落地
+| 层 | 改动 |
+|---|---|
+| 契约 | v1.5（随本 PR 一并提交；`origin/main` 仍是 v1.4，需一并合入才不留门禁 1 缺口） |
+| Zod 注册表 | `health.body_sense`：三字段均可空，**客户端强制"体感/围度至少填一项"**（拒绝空记录） |
+| 埋点 | `complete_checkin(health/body_sense)` → `health.body_sense` 步，薄肌王链路补齐 |
+| 打分 | 不参与 §5.1 评分（无指标），仅留痕；Phase 3 体脂/围度趋势再消费 |
+| UI | 打卡页自动渲染（注册表驱动）；看板近期记录显示中文类型名 |
+
+### 边界确认
+- Codex **零改动**：`events.type` 自由 text、`EventInput.payload` 自由 dict、`domain` 枚举不变。
+- 仍守「不碰 cloudbase/」：本轮只改 `frontend/` + 契约/ADR 文档（PO 授权）。
+
+### 仍未自动发出的步
+`*.retain`、`product.habit|value` —— 口径未定/Phase 3，继续不发。
+
+### 证据
+`tsc`=0；`vitest`=0（17 文件 / 122 用例）；`taro build` weapp=0（35.91s）/ h5=0（15.02s）；覆盖率 行 86.21%。

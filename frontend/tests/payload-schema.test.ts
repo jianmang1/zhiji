@@ -3,7 +3,7 @@ import { DOMAINS, KING_LABELS } from '../src/types/contract'
 import { EVENT_TYPES, getEventTypeSpec } from '../src/schemas/payload'
 
 const CONTRACT_TYPES: Record<string, string[]> = {
-  health: ['water', 'sleep', 'workout'],
+  health: ['water', 'sleep', 'workout', 'body_sense'],
   work: ['work_log'],
   dating: ['approach', 'date', 'chat', 'stage'],
 }
@@ -29,6 +29,7 @@ describe('payload 注册表与契约 v1.4 §3 一致', () => {
       'health.water': ['ml'],
       'health.sleep': ['duration_h', 'quality'],
       'health.workout': ['type', 'duration_min', 'calorie'],
+      'health.body_sense': ['waist_cm', 'feel', 'note'],
       'work.work_log': ['hours', 'wage', 'salary', 'commute_min'],
       'dating.approach': ['count', 'channel', 'got_response'],
       'dating.date': ['count', 'duration_min', 'mood', 'spend_yuan'],
@@ -45,6 +46,23 @@ describe('payload 注册表与契约 v1.4 §3 一致', () => {
 })
 
 describe('payload 校验', () => {
+  it('body_sense 允许只填围度或只填体感，但拒绝全空', () => {
+    const spec = getEventTypeSpec('health', 'body_sense')
+    if (!spec) throw new Error('body_sense 缺失')
+    expect(spec.schema.safeParse({ waist_cm: 82 }).success).toBe(true)
+    expect(spec.schema.safeParse({ feel: 'ok' }).success).toBe(true)
+    expect(spec.schema.safeParse({ waist_cm: 82, feel: 'great', note: '腰带松了一格' }).success).toBe(true)
+    expect(spec.schema.safeParse({}).success).toBe(false)
+  })
+
+  it('body_sense 拒绝非法体感与越界围度', () => {
+    const spec = getEventTypeSpec('health', 'body_sense')
+    if (!spec) throw new Error('body_sense 缺失')
+    expect(spec.schema.safeParse({ feel: 'amazing' }).success).toBe(false)
+    expect(spec.schema.safeParse({ waist_cm: 0 }).success).toBe(false)
+    expect(spec.schema.safeParse({ waist_cm: 999 }).success).toBe(false)
+    expect(spec.schema.safeParse({ waist_cm: 80, extra: 1 }).success).toBe(false)
+  })
   it('接受合法的 health.water', () => {
     const spec = getEventTypeSpec('health', 'water')
     if (!spec) throw new Error('water 缺失')

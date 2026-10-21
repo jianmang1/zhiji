@@ -93,7 +93,7 @@ TARO_APP_CLOUDBASE_DISABLED=false
 
 payload 字段（契约 §3，逐项对齐，测试 `tests/payload-schema.test.ts` 断言"不多不少"）：
 
-- health：`water{ml}` / `sleep{duration_h,quality}` / `workout{type,duration_min,calorie}`
+- health：`water{ml}` / `sleep{duration_h,quality}` / `workout{type,duration_min,calorie}` / `body_sense{waist_cm?,feel?,note?}`（v1.5 / ADR-005-A）
 - work：`work_log{hours,wage,salary,commute_min}`
 - dating：`approach{count,channel,got_response}` / `date{count,duration_min,mood,spend_yuan?}` / `chat{duration_min,platform,initiator}` / `stage{stage,label,note?}`
 
@@ -119,7 +119,7 @@ payload 字段（契约 §3，逐项对齐，测试 `tests/payload-schema.test.t
 |------|--------|---------------|
 | 打开小程序 | `app_open` | `product.acquire`, `product.activate` |
 | 进入某王 | `view_king` | `product.activate`（首次 `{king}.onboard`） |
-| 薄肌王打卡 | `complete_checkin` | `health.water` / `health.sleep` / `health.workout`（首次 +`health.onboard`；三件套齐 +`health.active_day`） |
+| 薄肌王打卡 | `complete_checkin` | `health.water` / `health.sleep` / `health.workout` / `health.body_sense`（首次 +`health.onboard`；三件套齐 +`health.active_day`） |
 | 力王打卡 | `complete_checkin` | `work.wage`（首次 +`work.onboard`） |
 | 黄毛王搭讪 | `complete_checkin` | `dating.approach`；`got_response=true` 时 +`dating.response` |
 | 黄毛王约会 | `complete_checkin` | `dating.date` |
@@ -131,7 +131,8 @@ payload 字段（契约 §3，逐项对齐，测试 `tests/payload-schema.test.t
 埋点在既有打卡/进入动作里顺带触发，**不新增用户操作**；写失败只记 `trackError`，不阻断主流程。
 `channel/region/user_type` 来自 `profiles`（登录后 `ensureProfile()` 写一次）；`variant` v1 留空。
 
-未自动发出的步：`health.body_sense`、`work.spend`（需额外入口）、以及全部 `*.retain`/`product.habit|value` —— 属 Phase 3 或需更多信号，**不用假数据填充**。
+已全部打通入口的步：`health.body_sense`（体感/围度打卡）、`work.spend`（记一笔支出）。
+仍未自动发出的步：全部 `*.retain`、`product.habit|value` —— 口径未定或属 Phase 3（`retain` 需 D7、`value` 需达段位/生成 plan），**不用假数据填充**。
 
 ## 8. 两层漏斗（模块 7）
 

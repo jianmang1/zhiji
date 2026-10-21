@@ -74,12 +74,19 @@ export function buildPayloadSchema(fields: readonly FieldSpec[]): z.ZodType<Reco
   return z.object(shape).strict() as unknown as z.ZodType<Record<string, unknown>>
 }
 
-function defineType(type: string, label: string, fields: readonly FieldSpec[]): EventTypeSpec {
-  return { type, label, fields, schema: buildPayloadSchema(fields) }
+function defineType(
+  type: string,
+  label: string,
+  fields: readonly FieldSpec[],
+  refine?: (schema: z.ZodType<Record<string, unknown>>) => z.ZodType<Record<string, unknown>>,
+): EventTypeSpec {
+  const base = buildPayloadSchema(fields)
+  return { type, label, fields, schema: refine ? refine(base) : base }
 }
 
+
 /* ───────────────────────── health（薄肌王）───────────────────────── */
-/** 契约 §3：water{ml} / sleep{duration_h,quality} / workout{type,duration_min,calorie} */
+/** 契约 v1.5 §3：water{ml} / sleep{duration_h,quality} / workout{type,duration_min,calorie} / body_sense{waist_cm?,feel?,note?} */
 const HEALTH: readonly EventTypeSpec[] = [
   defineType('water', '喝大水', [{ key: 'ml', label: '饮水量', kind: 'number', unit: 'ml', min: 0, integer: true }]),
   defineType('sleep', '睡大觉', [
@@ -87,6 +94,27 @@ const HEALTH: readonly EventTypeSpec[] = [
     // 契约只规定字段名 quality，未冻结枚举 → 前端取最小语义集，待 PO 确认
     { key: 'quality', label: '睡眠质量', kind: 'enum', options: ['poor', 'fair', 'good', 'great'], optionLabels: { poor: '差', fair: '一般', good: '好', great: '极好' } },
   ]),
+  defineType(
+    'body_sense',
+    '体感/围度',
+    [
+      { key: 'waist_cm', label: '围度', kind: 'number', unit: 'cm', min: 1, max: 300, optional: true },
+      {
+        key: 'feel',
+        label: '体感',
+        kind: 'enum',
+        options: ['great', 'ok', 'tired'],
+        optionLabels: { great: '很好', ok: '一般', tired: '疲惫' },
+        optional: true,
+      },
+      { key: 'note', label: '备注（可选）', kind: 'text', optional: true },
+    ],
+    // 契约三个字段都可空，但空记录没有意义 → 客户端要求"体感与围度至少填一项"
+    (schema) =>
+      schema.refine((value) => value.waist_cm !== undefined || value.feel !== undefined, {
+        message: '体感与围度至少填一项',
+      }) as z.ZodType<Record<string, unknown>>,
+  ),
   defineType('workout', '练薄肌', [
     { key: 'type', label: '训练类型', kind: 'text' },
     { key: 'duration_min', label: '训练时长', kind: 'number', unit: '分钟', min: 0, integer: true },

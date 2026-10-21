@@ -12,6 +12,7 @@ import TierBadge from '../../components/TierBadge'
 import { useAnalyticsStore } from '../../stores/analyticsStore'
 import { usePlanStore } from '../../stores/planStore'
 import { useEventStore } from '../../stores/eventStore'
+import { getEventTypeSpec } from '../../schemas/payload'
 import { KING_COLORS } from '../../styles/kings'
 import { DOMAINS, KING_LABELS, type Domain } from '../../types/contract'
 import { ensureAuthenticated } from '../../utils/guard'
@@ -205,7 +206,7 @@ export default function DashboardPage() {
               <Text className="dash__rowKing" style={{ background: KING_COLORS[event.domain] }}>
                 {KING_LABELS[event.domain]}
               </Text>
-              <Text className="dash__rowType">{event.type}</Text>
+              <Text className="dash__rowType">{getEventTypeSpec(event.domain, event.type)?.label ?? event.type}</Text>
             </View>
             <Text className="dash__rowTs">{formatTs(event.ts)}</Text>
           </View>
