@@ -128,3 +128,23 @@
     opacity: 0.45;
   }
 }
+.entry__spend {
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  background: #ffffff;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.entry__spendTitle {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.entry__spendNote {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+}

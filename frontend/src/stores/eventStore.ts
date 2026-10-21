@@ -21,7 +21,12 @@ export interface EventState {
   loading: boolean
   error: string | null
   lastCreatedId: BigIntId | null
-  submit: (domain: Domain, type: string, draft: unknown) => Promise<SubmitResult>
+  submit: (
+    domain: Domain,
+    type: string,
+    draft: unknown,
+    meta?: { entryDurationMs?: number },
+  ) => Promise<SubmitResult>
   refresh: (limit?: number) => Promise<void>
   reset: () => void
 }
@@ -63,7 +68,7 @@ export const useEventStore = create<EventState>((set, get) => ({
   error: null,
   lastCreatedId: null,
 
-  async submit(domain, type, draft) {
+  async submit(domain, type, draft, meta) {
     // 1) 客户端校验（Zod 镜像契约，见 schemas/event.ts）
     const parsed = parseEventDraft(domain, type, draft)
     if (!parsed.ok) {
@@ -87,7 +92,15 @@ export const useEventStore = create<EventState>((set, get) => ({
         healthKindsToday: healthKindsToday(state.events, parsed.value.type),
         previousStage: previousStage(state.events),
       })
-      void useAnalyticsStore.getState().trackPlans(plans)
+      const entryMs = meta?.entryDurationMs
+      const tracked =
+        typeof entryMs === 'number' && Number.isFinite(entryMs) && entryMs >= 0
+          ? plans.map((plan) => ({
+              ...plan,
+              payload: { ...(plan.payload ?? {}), entry_ms: Math.round(entryMs) },
+            }))
+          : plans
+      void useAnalyticsStore.getState().trackPlans(tracked)
 
       return { ok: true, id: result.id, via: result.via }
     } catch (error) {

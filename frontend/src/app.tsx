@@ -1,6 +1,7 @@
 import { PropsWithChildren } from 'react'
 import { useLaunch } from '@tarojs/taro'
 import { bootstrapCloud, isCloudConfigured } from './services/cloudbase'
+import { sinceBoot } from './services/perf'
 import { plansForAppOpen } from './services/tracking'
 import { useAnalyticsStore } from './stores/analyticsStore'
 import { useAuthStore } from './stores/authStore'
@@ -22,7 +23,7 @@ function App({ children }: PropsWithChildren) {
       const analytics = useAnalyticsStore.getState()
       await analytics.ensureProfile()
       // app_open → product.acquire + product.activate（契约 §8）
-      await analytics.trackPlans(plansForAppOpen())
+      await analytics.trackPlans(plansForAppOpen(sinceBoot()))
     })()
   })
 

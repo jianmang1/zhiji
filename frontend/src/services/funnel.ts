@@ -197,3 +197,80 @@ export function segmentOptions(events: readonly AnalyticsEventRow[]): {
     userTypes: [...userTypes].sort(),
   }
 }
+/* ─────────────────── getFunnel 云函数接入（契约 §8，A2） ─────────────────── */
+
+/** getFunnel 返回的单步（签名见 docs/agents/codex-dispatch-getfunnel.md） */
+export interface RemoteFunnelStep {
+  step: FunnelStep
+  count: number
+  conv_rate: number
+  drop_off: number
+}
+
+export interface RemoteFunnelPayload {
+  steps: RemoteFunnelStep[]
+  bottleneck_step: FunnelStep | null
+  segment?: Record<string, string | null>
+}
+
+/**
+ * `conv_rate` / `drop_off` 的单位契约未冻结（比例 0–1 或百分数 0–100 都可能）。
+ * 这里按数值大小归一：绝对值 ≤1 视为比例，>1 视为百分数。
+ * 已作为口径待确认项记入 docs/heartbeat-log.md。
+ */
+export function toPercent(value: number): number {
+  if (!Number.isFinite(value)) return 0
+  return Math.abs(value) <= 1 ? value * 100 : value
+}
+
+/**
+ * 把 getFunnel 的响应适配成页面已在用的 FunnelReport（页面零改动）。
+ * 以契约 §8 的步骤顺序为准，缺失步补 0；bottleneck 优先取云端结论。
+ */
+export function adaptRemoteFunnel(
+  key: 'product' | Domain,
+  title: string,
+  remote: RemoteFunnelPayload,
+  orderedSteps: readonly FunnelStep[],
+): FunnelReport {
+  const byStep = new Map<FunnelStep, RemoteFunnelStep>()
+  if (Array.isArray(remote.steps)) {
+    for (const item of remote.steps) {
+      if (item && typeof item.step === 'string') byStep.set(item.step, item)
+    }
+  }
+
+  const steps: FunnelStepStat[] = orderedSteps.map((step) => {
+    const item = byStep.get(step)
+    const count = item ? item.count : 0
+    return {
+      step,
+      label: STEP_LABELS[step],
+      count,
+      conversionFromPrev: item ? toPercent(item.conv_rate) / 100 : 0,
+      dropOffPct: item ? toPercent(item.drop_off) : 0,
+    }
+  })
+
+  let bottleneck: FunnelStep | null = remote.bottleneck_step ?? null
+  if (!bottleneck) {
+    let worst = -1
+    for (let i = 1; i < steps.length; i += 1) {
+      const stat = steps[i]
+      if (stat && stat.dropOffPct > worst) {
+        worst = stat.dropOffPct
+        bottleneck = stat.step
+      }
+    }
+  }
+
+  const first = steps[0] ? steps[0].count : 0
+  const last = steps.length > 0 ? steps[steps.length - 1] : undefined
+  return {
+    key,
+    title,
+    steps,
+    bottleneck,
+    overallConversion: first > 0 && last ? last.count / first : 0,
+  }
+}

@@ -15,9 +15,14 @@ export interface TrackPlan {
 }
 
 /** 打开小程序：获取 + 激活 */
-export function plansForAppOpen(): TrackPlan[] {
+export function plansForAppOpen(loadMs?: number): TrackPlan[] {
   return [
-    { name: 'app_open', step: 'product.acquire', domain: null },
+    {
+      name: 'app_open',
+      step: 'product.acquire',
+      domain: null,
+      payload: typeof loadMs === 'number' && loadMs >= 0 ? { load_ms: Math.round(loadMs) } : undefined,
+    },
     { name: 'app_open', step: 'product.activate', domain: null },
   ]
 }
@@ -36,6 +41,21 @@ export function plansForShare(domain: Domain | null): TrackPlan[] {
   const plans: TrackPlan[] = [{ name: 'share', step: 'product.refer', domain }]
   if (domain) plans.push({ name: 'share', step: `${domain}.refer` as FunnelStep, domain })
   return plans
+}
+
+/**
+ * 力王支出 → `log_spending` + `work.spend`（契约 §8）。
+ * 只写 analytics_events（非敏感、受 RLS），不落 events 表。
+ */
+export function plansForSpending(input: { category: string; amount: number }): TrackPlan[] {
+  return [
+    {
+      name: 'log_spending',
+      step: 'work.spend',
+      domain: 'work',
+      payload: { category: input.category, amount: input.amount },
+    },
+  ]
 }
 
 /** 召回/复活 */

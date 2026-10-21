@@ -7,9 +7,18 @@ const h = vi.hoisted(() => ({
   insertAnalyticsEvent: vi.fn(),
   selectProfile: vi.fn(),
   upsertProfile: vi.fn(),
+  fetchRemoteFunnels: vi.fn(),
+  cloudEnabled: false,
 }))
 
-vi.mock('../src/services/events', () => ({ loadDashboardData: h.loadDashboardData }))
+vi.mock('../src/services/events', () => ({
+  loadDashboardData: h.loadDashboardData,
+  isCloudFunctionConfigured: () => h.cloudEnabled,
+}))
+vi.mock('../src/services/funnelApi', () => ({
+  fetchRemoteFunnels: h.fetchRemoteFunnels,
+  funnelRange: () => ({ from: '2026-09-21T00:00:00.000Z', to: '2026-10-21T00:00:00.000Z' }),
+}))
 vi.mock('../src/services/rdb', () => ({
   selectAnalyticsEvents: h.selectAnalyticsEvents,
   insertAnalyticsEvent: h.insertAnalyticsEvent,
@@ -153,5 +162,57 @@ describe('analyticsStore', () => {
       expect.objectContaining({ user_id: 'u-1', user_type: 'new', acquire_channel: 'organic' }),
     )
     expect(useAnalyticsStore.getState().profile?.user_type).toBe('new')
+  })
+})
+describe('getFunnel 云端接入（A2）', () => {
+  const remoteReports = [
+    { key: 'product', title: '产品级 AARRR', steps: [], bottleneck: null, overallConversion: 0 },
+    { key: 'dating', title: '黄毛王', steps: [], bottleneck: null, overallConversion: 0 },
+    { key: 'health', title: '薄肌王', steps: [], bottleneck: null, overallConversion: 0 },
+    { key: 'work', title: '力王', steps: [], bottleneck: null, overallConversion: 0 },
+  ]
+
+  beforeEach(() => {
+    h.selectAnalyticsEvents.mockReset()
+    h.fetchRemoteFunnels.mockReset()
+    h.cloudEnabled = false
+    useAnalyticsStore.setState({ funnel: [], funnelSource: 'local', segment: {}, error: null })
+  })
+
+  it('云端可用时改用 getFunnel，并标记来源为 cloud', async () => {
+    h.cloudEnabled = true
+    h.selectAnalyticsEvents.mockResolvedValue([])
+    h.fetchRemoteFunnels.mockResolvedValue(remoteReports)
+
+    await useAnalyticsStore.getState().refreshFunnel()
+
+    expect(h.fetchRemoteFunnels).toHaveBeenCalledTimes(1)
+    expect(useAnalyticsStore.getState().funnelSource).toBe('cloud')
+    expect(useAnalyticsStore.getState().funnel).toHaveLength(4)
+  })
+
+  it('云端失败时回退本地计算，不报错、不伪造数据', async () => {
+    h.cloudEnabled = true
+    h.selectAnalyticsEvents.mockResolvedValue([
+      analyticsRow('product.acquire', 'organic'),
+      analyticsRow('product.activate', 'organic'),
+    ])
+    h.fetchRemoteFunnels.mockRejectedValue(new Error('network down'))
+
+    await useAnalyticsStore.getState().refreshFunnel()
+
+    const state = useAnalyticsStore.getState()
+    expect(state.funnelSource).toBe('local')
+    const product = state.funnel.find((r) => r.key === 'product')
+    expect(product?.steps[0]?.count).toBe(1)
+    expect(state.error).toBeNull()
+  })
+
+  it('未配置云函数时不发请求，直接本地算', async () => {
+    h.cloudEnabled = false
+    h.selectAnalyticsEvents.mockResolvedValue([])
+    await useAnalyticsStore.getState().refreshFunnel()
+    expect(h.fetchRemoteFunnels).not.toHaveBeenCalled()
+    expect(useAnalyticsStore.getState().funnelSource).toBe('local')
   })
 })
