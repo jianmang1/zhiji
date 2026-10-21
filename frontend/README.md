@@ -55,6 +55,27 @@ pnpm build:h5                       # → dist/h5
 - 端点未配置时，health/dating 写入抛 `CloudFunctionUnavailableError`，UI 明确提示并禁用提交；**绝不**降级为明文直写或伪造数据。
 - 非敏感域直写显式带 `user_id`（NOT NULL），由 RLS `WITH CHECK (user_id = auth.uid())` 校验归属。
 
+## 4.1 端点配置与排错（A6 交接用）
+
+三个变量见 `frontend/.env.example`，均为**构建期**注入（改完要重新 `taro build`）：
+
+```
+TARO_APP_CLOUDBASE_FN_BASE_URL=   # 空 = 未配置；配好后才允许 health/dating 打卡与 generatePlan
+TARO_APP_CLOUDBASE_ENV=zhiji-d3gd1k9j43e7c20ac
+TARO_APP_CLOUDBASE_DISABLED=false
+```
+
+失败文案按类型区分（`services/events.ts` 的 `describeHttpFailure`），便于判断是不是端点问题：
+
+| 现象 | 含义 | 下一步 |
+|---|---|---|
+| `404 INVALID_PATH` | 主机有效，但**路径未绑定** | 在 CloudBase 绑定「HTTP 访问服务」路径；核对 base URL |
+| `401` / `403` | 未登录 / 无权限 | 重新登录（token 由 SDK 管理） |
+| `5xx` | 云函数服务异常 | 看 Codex 侧函数日志（A3 CLS 未配时暂无运行日志） |
+| 请求未发出 | `TARO_APP_CLOUDBASE_FN_BASE_URL` 为空 | 配置后重构建 |
+
+> 实测（2026-10-21）：`https://zhiji-d3gd1k9j43e7c20ac.service.tcloudbase.com` 主机可达，但 `/`、`/recordEvent`、`/api/recordEvent` 等**全部 404 INVALID_PATH** —— 端点尚未绑定公网路径。
+
 ## 5. 契约映射表（Zod/类型 ↔ cloudbase-contract v1.4）
 
 | 契约字段 | 契约约束 | 前端实现 |
