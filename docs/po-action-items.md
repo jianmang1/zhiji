@@ -24,4 +24,4 @@
 > **DeepSeek 当前无任何待办。** 前端链路（A2/A7/A8/plans/diagnostics/body_sense）已全部合入 main（PR#4/#6/#7/#8），B5=A 已落地。无需唤醒。
 
 ## 本轮结论
-**`origin/main = 21f013e`（本轮心跳提交；初 `git fetch` 因出向 HTTPS 中断失败，末次 `git fetch` 成功、`git push` 以快进 `003e30f..21f013e` 被接受，反证 origin 自 003e30f 无新提交介入；经 `git ls-remote` 复验 `refs/pull` 仅 #1–#10，无 #11+ 与未决 OPEN PR）。** A/B 类全闭环，9 条 `feat/*` 全合 main。剩余唯一活项：**🟡 唤醒 Codex 执行 health/dating 加密读写 E2E** ——需你（PO）在前端用测试账号保持登录驱动真实用户路径，Codex 做服务端密文/解密/RLS 隔离核验（directive 已派发）。token 边界：仅前端↔Codex，不经 Tech Lead。心跳每轮刷新本文件。
+**`origin/main = 8fc5048`（第 17 轮心跳修正提交；初 `21f013e`、修正 `8fc5048`，`git push` 以快进 `003e30f..8fc5048` 被接受，反证 origin 自 003e30f 无新提交介入；经 `git ls-remote` 复验 `refs/pull` 仅 #1–#10，无 #11+ 与未决 OPEN PR）。** A/B 类全闭环，9 条 `feat/*` 全合 main。剩余唯一活项：**🟡 唤醒 Codex 执行 health/dating 加密读写 E2E** ——需你（PO）在前端用测试账号保持登录驱动真实用户路径，Codex 做服务端密文/解密/RLS 隔离核验（directive 已派发）。token 边界：仅前端↔Codex，不经 Tech Lead。心跳每轮刷新本文件。

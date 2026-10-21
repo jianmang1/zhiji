@@ -657,4 +657,4 @@ FERNET 密钥恢复（控制台）已确认；health/dating 加密读写 E2E 已
 - 不伪造远端状态/测试结果；无新 B 类，不升 PO。
 
 ### 5. 本轮结论
-`origin/main = 21f013e`（本轮心跳提交；初 `git fetch` 因出向 HTTPS 中断失败，末次 `git fetch` 成功、`git push` 以快进 `003e30f..21f013e` 被接受，反证 origin 自 003e30f 无新提交介入）。经 `git ls-remote` 权威复验：远端 heads 仅已知分支、`refs/pull` 仅 #1–#10（无 #11+），**无未决 OPEN PR**。A/B 类全闭环，feat/* 全合 main。唯一活项 = health/dating 加密读写 E2E，待 PO 前端登录 + Codex 服务端核验（token 不经 Tech Lead）。本轮无新增拍板/待办。待 PO 处理清单见 `docs/po-action-items.md`（第 17 轮）。
+`origin/main = 8fc5048`（第 17 轮心跳修正提交；初 `21f013e`、修正 `8fc5048`，`git push` 以快进 `003e30f..8fc5048` 被接受，反证 origin 自 003e30f 无新提交介入）。经 `git ls-remote` 权威复验：远端 heads 仅已知分支、`refs/pull` 仅 #1–#10（无 #11+），**无未决 OPEN PR**。A/B 类全闭环，feat/* 全合 main。唯一活项 = health/dating 加密读写 E2E，待 PO 前端登录 + Codex 服务端核验（token 不经 Tech Lead）。本轮无新增拍板/待办。待 PO 处理清单见 `docs/po-action-items.md`（第 17 轮）。
