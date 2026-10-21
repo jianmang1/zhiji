@@ -416,3 +416,48 @@ PO 裁定 **ADR-005 = A**（约束已解除，立即实现）。契约已由 Tec
 - PR#6/#7 可关闭；前端链路全部入 main，DeepSeek 当前**无待办**。
 - Codex 后端工作已保全于恢复分支，A1–A6 仍待 CloudBase 会话 + 证据。
 - 待 PO 处理清单见 `docs/po-action-items.md`（第 9 轮）。
+---
+
+## 第 10 轮 · 2026-10-21T16:25+08:00（Tech Lead 自治 · 合并 Codex PR#9）
+
+### 0. 触发
+- PO 消息「codex已完成」。依硬门禁（远端为事实源）核验，非凭一句话认证。
+
+### 1. 门禁核验（远端为事实源）
+- `git ls-remote`：`feat/phase3-a1-a6`(85a8153) 已 push；`refs/pull/9/head` = 同一 hash → **PR#9 存在**。
+- `git diff --stat origin/main...origin/feat/phase3-a1-a6`：11 文件，339+/34-，含新增 `funnel.py`、`test_funnel_phase3.py`、`adr/ADR-006-cohort-permission.md`、迁移 SQL、更新 `cloudbase-contract.md`/`integration-checkpoint-20261021.md`。
+- 仅 `docs/cloudbase-contract.md` 触碰共享契约；**前端零改动**（无 frontend/、无 schemas/payload），无需重跑 vitest。
+
+### 2. 代码与安全审查（逐文件）
+- **handlers.py**：新增 `_fallback_plan()`；`generatePlan` 的 LLM 调用包入 `try/except (CloudBaseError, RuntimeError)`，失败回退规则引擎并返回 `ai_enabled` 标志——**未动鉴权**，recordEvent/listEvents/getFunnel 的 `auth.uid()` 注入保持。
+- **funnel.py（新）**：纯本地聚合（collections/datetime/typing），严格基于传入的 RLS 可见事件，**无 `service_role`、无跨用户查询**，与 ADR-006 边界一致。
+- **config.py**：`llm_provider/model` 为空时抛 `RuntimeError` → 被上述 except 捕获触发降级，机制自洽。
+- **cloudbaserc.json**：四函数加 `clsLogsetId/clsTopicId`（A3，补日志缺口）+ `gatewayPath`（A6 公网路由）+ `role:TCB_QcsRole`。**明确路由匿名开关未启用，函数仍要求 Bearer token**（无效/缺失→401，已实测）。
+- **迁移 SQL**：仅追加 `experiment_id text` + 部分索引，带回滚注释，不碰 ADR-004 的 `user_id text`，非破坏性。
+- **测试真实有效**：`test_funnel_phase3.py` 断言渠道质量/趋势/A-B 拆分的精确值；`test_functions.py` 将"schema 非法/网关不可用"改为断言 201+`ai_enabled:false`+`rules-fallback`。
+
+### 3. 证据核验（诚实）
+- A1：迁移已应用 PG；本地 pytest 25 passed；`/getFunnel` 实测 HTTP 200/738ms。
+- A3：日志集/Topic 已建（7天）；CLI `tcb logs` 现已可查 `getFunnel` 的 `status_code=200`。
+- A4：降级路径 HTTP 201/703ms（`ai_enabled:false`）；正常 AI HTTP 201/16153ms（`ai_enabled:true`）。
+- A6：公网路由实测有效 JWT→200、无效/缺失→401。
+- 事件复测：recordEvent 201/801ms、listEvents 200/501ms、删除 204（均带耗时）。
+- **诚实缺口**：`FERNET_ENCRYPTION_KEY` 环境为空 → health/dating 加密写入未复测，Codex 主动未碰敏感域，交环境负责人恢复密钥。
+
+### 4. 合并执行（Tech Lead 签核）
+- `git merge --no-ff origin/feat/phase3-a1-a6` → 冲突仅 `docs/cloudbase-contract.md`（Codex 自 PR#8 合并前 main 切出，两边各改 §5）。
+- 核验确认 **main 当前契约仅 95 行、止于 §5 表格，§5.1/§6/§7/§8 在 main lineage 中缺失**；PR#9 补齐并扩展这些章节（含 `analytics_events` 表、`experiment_id`、渠道质量/趋势/A-B 拆分、RLS 重申），且与 §3 body_sense(ADR-005)/AI降级(A4)/cohort边界(ADR-006) 全部自洽。
+- 解决：取 PR#9 完整一侧，§5 表格保留 E2E2 状态表述。无重复、无内容丢失。
+- 提交 `84fce6b`，已 `git push origin main`。
+
+### 5. 关联裁决
+- **ADR-006**：Proposed → **Accepted（边界已定）**；跨用户聚合实现仍冻结，是否/如何上线升 PO（隐私合规）。
+- **恢复分支 `recover/techlead-quarantine-20261021`(c47909a)**：后端部分已被 PR#9 干净取代；仅 KB 文档仍待 PO 批准入库，分支维持 DO NOT MERGE。
+
+### 6. 剩余未闭环（升 PO / 凭证）
+- 🔴 `FERNET_ENCRYPTION_KEY` 恢复（环境负责人）→ 随后 Codex 复测 health/dating 闭环。
+- 🔴 ADR-006 跨用户 cohort 上线隐私拍板。
+- 🔴 KB 文档入库批准（恢复分支中的 KB 文档挑出合入 main）。
+
+### 7. 本轮结论
+PR#9 已合并 main(`84fce6b`)，Codex 后端 Phase3（A1/A3/A4/A5/A6）全部入主，硬门禁通过。Codex 后端工作至此闭环（恢复分支仅留 KB 文档待入库）。待 PO：FERNET 密钥恢复 + ADR-006 隐私拍板 + KB 入库批准。待办清单见 `docs/po-action-items.md`（第 10 轮）。
