@@ -5,6 +5,7 @@ export default defineAppConfig({
     'pages/dashboard/index',
     'pages/funnel/index',
     'pages/plans/index',
+    'pages/segments/index',
   ],
   window: {
     backgroundTextStyle: 'dark',
@@ -22,6 +23,7 @@ export default defineAppConfig({
       { pagePath: 'pages/dashboard/index', text: '看板' },
       { pagePath: 'pages/funnel/index', text: '漏斗' },
       { pagePath: 'pages/plans/index', text: '方案' },
+      { pagePath: 'pages/segments/index', text: '分群' },
     ],
   },
 })

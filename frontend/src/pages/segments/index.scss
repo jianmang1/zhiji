@@ -1,0 +1,142 @@
+.seg {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.seg__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.seg__title {
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.seg__btn {
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  background: #ffffff;
+  font-size: 12px;
+  border-radius: 0;
+}
+
+.seg__note {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.seg__dims {
+  display: flex;
+  gap: 8px;
+}
+
+.seg__dim {
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  padding: 8px 14px;
+  background: #ffffff;
+  font-size: 13px;
+
+  &--on {
+    background: var(--ink);
+    color: #ffffff;
+  }
+}
+
+.seg__empty {
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  background: #ffffff;
+  padding: 16px;
+}
+
+.seg__emptyText {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.seg__card {
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  background: #ffffff;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.seg__cardHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.seg__value {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.seg__events {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.seg__bar {
+  height: 10px;
+  border: 2px solid var(--ink);
+  background: #ffffff;
+}
+
+.seg__barFill {
+  height: 100%;
+  background: #000000;
+}
+
+.seg__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.seg__stat {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.seg__kings {
+  display: flex;
+  gap: 6px;
+}
+
+.seg__king {
+  flex: 1;
+  border: 2px solid var(--ink);
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.seg__kingName {
+  font-size: 10px;
+}
+
+.seg__kingValue {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.seg__foot {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.6;
+}
