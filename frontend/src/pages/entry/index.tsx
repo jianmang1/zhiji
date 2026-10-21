@@ -14,7 +14,14 @@ import Taro, { useDidShow } from '@tarojs/taro'
 import { useMemo, useState } from 'react'
 import { EVENT_TYPES, getEventTypeSpec, type FieldSpec } from '../../schemas/payload'
 import { DEFAULT_SOURCE } from '../../schemas/event'
+import {
+  SPEND_CATEGORIES,
+  SPEND_CATEGORY_LABELS,
+  spendingSchema,
+  type SpendCategory,
+} from '../../schemas/spending'
 import { isCloudFunctionConfigured } from '../../services/events'
+import { plansForSpending } from '../../services/tracking'
 import { DOMAINS, KING_LABELS, isSensitiveDomain, type Domain } from '../../types/contract'
 import { useEventStore } from '../../stores/eventStore'
 import { useAnalyticsStore } from '../../stores/analyticsStore'
@@ -58,9 +65,14 @@ export default function EntryPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [via, setVia] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [spendCategory, setSpendCategory] = useState<SpendCategory>('hedonic')
+  const [spendAmount, setSpendAmount] = useState('')
+  const [spendError, setSpendError] = useState<string | null>(null)
+  const [spendSaving, setSpendSaving] = useState(false)
   const submit = useEventStore((s) => s.submit)
   const refresh = useEventStore((s) => s.refresh)
   const track = useAnalyticsStore((s) => s.track)
+  const trackPlans = useAnalyticsStore((s) => s.trackPlans)
 
   useDidShow(() => {
     void (async () => {
@@ -118,6 +130,27 @@ export default function EntryPage() {
       }
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  /** 力王支出：只发 log_spending 埋点（契约 §8），不写 events 表 */
+  const handleSpending = async () => {
+    const parsed = spendingSchema.safeParse({
+      category: spendCategory,
+      amount: Number(spendAmount),
+    })
+    if (!parsed.success) {
+      setSpendError('金额需要是大于 0 的数字')
+      return
+    }
+    setSpendSaving(true)
+    setSpendError(null)
+    try {
+      await trackPlans(plansForSpending(parsed.data))
+      setSpendAmount('')
+      await Taro.showToast({ title: '已记支出', icon: 'success' })
+    } finally {
+      setSpendSaving(false)
     }
   }
 
@@ -237,6 +270,41 @@ export default function EntryPage() {
             onClick={handleSubmit}
           >
             {submitting ? '提交中…' : '记下这一笔'}
+          </Button>
+        </View>
+      )}
+
+      {domain === 'work' && (
+        <View className="entry__spend">
+          <Text className="entry__spendTitle">记一笔支出</Text>
+          <Text className="entry__spendNote">力王的「消费」步，按契约 §8 只记行为事件。</Text>
+          <View className="entry__chips">
+            {SPEND_CATEGORIES.map((category) => (
+              <View
+                key={category}
+                className={`entry__chip ${spendCategory === category ? 'entry__chip--on' : ''}`}
+                style={spendCategory === category ? { background: KING_COLORS.work } : undefined}
+                onClick={() => setSpendCategory(category)}
+              >
+                <Text>{SPEND_CATEGORY_LABELS[category]}</Text>
+              </View>
+            ))}
+          </View>
+          <Input
+            className="entry__input"
+            type="digit"
+            value={spendAmount}
+            placeholder="金额（元）"
+            onInput={(e) => setSpendAmount(e.detail.value)}
+          />
+          {spendError && <Text className="entry__error">{spendError}</Text>}
+          <Button
+            className="entry__submit"
+            style={{ background: KING_COLORS.work }}
+            loading={spendSaving}
+            onClick={handleSpending}
+          >
+            {spendSaving ? '记录中…' : '记下这笔支出'}
           </Button>
         </View>
       )}
