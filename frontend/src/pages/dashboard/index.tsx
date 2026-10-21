@@ -10,7 +10,9 @@ import Taro, { useDidShow } from '@tarojs/taro'
 import { useState } from 'react'
 import TierBadge from '../../components/TierBadge'
 import { useAnalyticsStore } from '../../stores/analyticsStore'
+import { usePlanStore } from '../../stores/planStore'
 import { useEventStore } from '../../stores/eventStore'
+import { getEventTypeSpec } from '../../schemas/payload'
 import { KING_COLORS } from '../../styles/kings'
 import { DOMAINS, KING_LABELS, type Domain } from '../../types/contract'
 import { ensureAuthenticated } from '../../utils/guard'
@@ -34,6 +36,8 @@ export default function DashboardPage() {
   const error = useAnalyticsStore((s) => s.error)
   const refresh = useAnalyticsStore((s) => s.refresh)
   const experience = useAnalyticsStore((s) => s.experience)
+  const plans = usePlanStore((s) => s.plans)
+  const loadPlans = usePlanStore((s) => s.load)
   const refreshExperience = useAnalyticsStore((s) => s.refreshExperience)
   const [expanded, setExpanded] = useState<Domain | null>(null)
 
@@ -42,10 +46,13 @@ export default function DashboardPage() {
       if (await ensureAuthenticated()) {
         await refresh()
         await refreshExperience()
+        await loadPlans()
         await useEventStore.getState().refresh()
       }
     })()
   })
+
+  const latestPlan = plans[0]
 
   return (
     <View className="dash">
@@ -168,12 +175,12 @@ export default function DashboardPage() {
       <View className="dash__ai">
         <View className="dash__aiHead">
           <Text className="dash__aiTitle">AI 意见</Text>
-          <Text className="dash__aiBadge">待 generatePlan</Text>
+          <Text className="dash__aiBadge">{latestPlan ? '最新' : '尚未生成'}</Text>
         </View>
         <Text className="dash__aiText">
-          generatePlan 云函数还没在契约里标「已实现」，按门禁不接真实调用，这里不编造建议。
-          接入后展示本周 summary、2–4 条 actions（含 why 与 effort）和 next_milestone；
-          score / tier 由本地规则引擎算好传入，LLM 只写文字。
+          {latestPlan && latestPlan.content
+            ? `${latestPlan.content.summary}（${latestPlan.content.actions.length} 条行动 · 下一里程碑：${latestPlan.content.next_milestone}）`
+            : '还没有方案。去「方案」页为某位王生成第一条：generatePlan 已标「已实现」，listPlans 未提供故列表走 cloud.rdb()。'}
         </Text>
       </View>
 
@@ -199,7 +206,7 @@ export default function DashboardPage() {
               <Text className="dash__rowKing" style={{ background: KING_COLORS[event.domain] }}>
                 {KING_LABELS[event.domain]}
               </Text>
-              <Text className="dash__rowType">{event.type}</Text>
+              <Text className="dash__rowType">{getEventTypeSpec(event.domain, event.type)?.label ?? event.type}</Text>
             </View>
             <Text className="dash__rowTs">{formatTs(event.ts)}</Text>
           </View>

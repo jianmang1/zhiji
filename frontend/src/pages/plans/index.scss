@@ -2,66 +2,183 @@
   min-height: 100vh;
   box-sizing: border-box;
   padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.plans__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.plans__title {
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.plans__btn {
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  background: #ffffff;
+  font-size: 12px;
+  border-radius: 0;
 }
 
 .plans__card {
   border: 3px solid var(--ink);
   box-shadow: 6px 6px 0 var(--ink);
   background: #ffffff;
-  padding: 16px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.plans__head {
+.plans__label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.plans__kings {
   display: flex;
-  align-items: center;
   gap: 8px;
 }
 
-.plans__title {
-  font-size: 20px;
-  font-weight: 900;
-}
-
-.plans__badge {
-  font-size: 10px;
-  background: var(--warn);
+.plans__king {
+  flex: 1;
   border: 2px solid var(--ink);
-  padding: 1px 6px;
-  font-weight: 800;
+  box-shadow: 3px 3px 0 var(--ink);
+  padding: 8px 0;
+  text-align: center;
+  font-size: 13px;
+  background: #ffffff;
 }
 
-.plans__text {
-  font-size: 13px;
+.plans__hint {
+  font-size: 11px;
   line-height: 1.7;
+  color: var(--muted);
 }
 
-.plans__subtitle {
-  font-size: 13px;
+.plans__generate {
+  border: 3px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
+  color: var(--ink);
+  font-size: 15px;
   font-weight: 800;
-  margin-top: 4px;
+  height: 46px;
+  line-height: 46px;
+  border-radius: 0;
+}
+
+.plans__error {
+  font-size: 12px;
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.plans__empty {
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  background: #ffffff;
+  padding: 16px;
+}
+
+.plans__emptyText {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted);
 }
 
 .plans__item {
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  background: #ffffff;
+  padding: 14px;
   display: flex;
-  gap: 6px;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.plans__dot {
-  font-size: 11px;
+.plans__itemHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.plans__itemText {
+.plans__itemTitle {
   flex: 1;
-  font-size: 12px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.plans__tier {
+  font-size: 11px;
+  border: 2px solid var(--ink);
+  padding: 2px 6px;
+  font-weight: 800;
+}
+
+.plans__meta {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.plans__summary {
+  font-size: 13px;
+  line-height: 1.7;
+  font-weight: 700;
+}
+
+.plans__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 2px dashed var(--ink);
+  padding-top: 8px;
+}
+
+.plans__action {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.plans__actionTitle {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.plans__effort {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.plans__actionWhy {
+  font-size: 11px;
   line-height: 1.6;
   color: var(--muted);
 }
 
-.plans__note {
+.plans__milestone {
+  font-size: 12px;
+  font-weight: 700;
+  border-top: 2px solid var(--ink);
+  padding-top: 8px;
+}
+
+.plans__bad {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--danger);
+}
+
+.plans__foot {
   font-size: 10px;
   color: var(--muted);
-  margin-top: 4px;
+  line-height: 1.6;
 }

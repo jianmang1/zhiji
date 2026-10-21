@@ -12,7 +12,7 @@ Taro 4 + React + TypeScript 前端，编译 **微信小程序 + H5** 双端；�
 | 1 | 项目初始化与依赖 | `package.json`、`config/index.ts`、`tsconfig.json`、`project.config.json`、`babel.config.js` |
 | 2 | Zustand 状态 + auth + rdb 客户端 | `src/services/{cloudbase,rdb}.ts`、`src/stores/*` |
 | 3 | Zod 校验 + 三王动态打卡 | `src/schemas/{payload,event}.ts`、`src/pages/entry/*` |
-| 4 | 看板 + 方案页 | `src/pages/dashboard/*`、`src/pages/plans/*`（占位） |
+| 4 | 看板 + 方案页 | `src/pages/dashboard/*`、`src/pages/plans/*`（generatePlan 已接入 + rdb 读 plans） |
 | 5 | **评分引擎**（客户端规则，不调 LLM） | `src/scoring/{thresholds,engine}.ts`、`src/components/TierBadge.tsx` |
 | 6 | **行为埋点** | `src/services/tracking.ts`、`src/stores/analyticsStore.ts`（`track` / `trackPlans`） |
 | 7 | **两层漏斗看板** | `src/services/funnel.ts`、`src/pages/funnel/*` |
@@ -55,6 +55,27 @@ pnpm build:h5                       # → dist/h5
 - 端点未配置时，health/dating 写入抛 `CloudFunctionUnavailableError`，UI 明确提示并禁用提交；**绝不**降级为明文直写或伪造数据。
 - 非敏感域直写显式带 `user_id`（NOT NULL），由 RLS `WITH CHECK (user_id = auth.uid())` 校验归属。
 
+## 4.1 端点配置与排错（A6 交接用）
+
+三个变量见 `frontend/.env.example`，均为**构建期**注入（改完要重新 `taro build`）：
+
+```
+TARO_APP_CLOUDBASE_FN_BASE_URL=   # 空 = 未配置；配好后才允许 health/dating 打卡与 generatePlan
+TARO_APP_CLOUDBASE_ENV=zhiji-d3gd1k9j43e7c20ac
+TARO_APP_CLOUDBASE_DISABLED=false
+```
+
+失败文案按类型区分（`services/events.ts` 的 `describeHttpFailure`），便于判断是不是端点问题：
+
+| 现象 | 含义 | 下一步 |
+|---|---|---|
+| `404 INVALID_PATH` | 主机有效，但**路径未绑定** | 在 CloudBase 绑定「HTTP 访问服务」路径；核对 base URL |
+| `401` / `403` | 未登录 / 无权限 | 重新登录（token 由 SDK 管理） |
+| `5xx` | 云函数服务异常 | 看 Codex 侧函数日志（A3 CLS 未配时暂无运行日志） |
+| 请求未发出 | `TARO_APP_CLOUDBASE_FN_BASE_URL` 为空 | 配置后重构建 |
+
+> 实测（2026-10-21）：`https://zhiji-d3gd1k9j43e7c20ac.service.tcloudbase.com` 主机可达，但 `/`、`/recordEvent`、`/api/recordEvent` 等**全部 404 INVALID_PATH** —— 端点尚未绑定公网路径。
+
 ## 5. 契约映射表（Zod/类型 ↔ cloudbase-contract v1.4）
 
 | 契约字段 | 契约约束 | 前端实现 |
@@ -72,7 +93,7 @@ pnpm build:h5                       # → dist/h5
 
 payload 字段（契约 §3，逐项对齐，测试 `tests/payload-schema.test.ts` 断言"不多不少"）：
 
-- health：`water{ml}` / `sleep{duration_h,quality}` / `workout{type,duration_min,calorie}`
+- health：`water{ml}` / `sleep{duration_h,quality}` / `workout{type,duration_min,calorie}` / `body_sense{waist_cm?,feel?,note?}`（v1.5 / ADR-005-A）
 - work：`work_log{hours,wage,salary,commute_min}`
 - dating：`approach{count,channel,got_response}` / `date{count,duration_min,mood,spend_yuan?}` / `chat{duration_min,platform,initiator}` / `stage{stage,label,note?}`
 
@@ -98,7 +119,7 @@ payload 字段（契约 §3，逐项对齐，测试 `tests/payload-schema.test.t
 |------|--------|---------------|
 | 打开小程序 | `app_open` | `product.acquire`, `product.activate` |
 | 进入某王 | `view_king` | `product.activate`（首次 `{king}.onboard`） |
-| 薄肌王打卡 | `complete_checkin` | `health.water` / `health.sleep` / `health.workout`（首次 +`health.onboard`；三件套齐 +`health.active_day`） |
+| 薄肌王打卡 | `complete_checkin` | `health.water` / `health.sleep` / `health.workout` / `health.body_sense`（首次 +`health.onboard`；三件套齐 +`health.active_day`） |
 | 力王打卡 | `complete_checkin` | `work.wage`（首次 +`work.onboard`） |
 | 黄毛王搭讪 | `complete_checkin` | `dating.approach`；`got_response=true` 时 +`dating.response` |
 | 黄毛王约会 | `complete_checkin` | `dating.date` |
@@ -110,7 +131,8 @@ payload 字段（契约 §3，逐项对齐，测试 `tests/payload-schema.test.t
 埋点在既有打卡/进入动作里顺带触发，**不新增用户操作**；写失败只记 `trackError`，不阻断主流程。
 `channel/region/user_type` 来自 `profiles`（登录后 `ensureProfile()` 写一次）；`variant` v1 留空。
 
-未自动发出的步：`health.body_sense`、`work.spend`（需额外入口）、以及全部 `*.retain`/`product.habit|value` —— 属 Phase 3 或需更多信号，**不用假数据填充**。
+已全部打通入口的步：`health.body_sense`（体感/围度打卡）、`work.spend`（记一笔支出）。
+仍未自动发出的步：全部 `*.retain`、`product.habit|value` —— 口径未定或属 Phase 3（`retain` 需 D7、`value` 需达段位/生成 plan），**不用假数据填充**。
 
 ## 8. 两层漏斗（模块 7）
 
@@ -144,7 +166,7 @@ v1 全部前端本地算；`getFunnel` 云函数属 Phase 3。
 
 ## 12. 已知限制 / 风险
 
-1. **云函数未部署**：health/dating 的 `recordEvent`/`listEvents` 未配端点（Codex 侧「待云端联调」），因此两位王的打卡与评分在看板会显示 0 并标注不可用 —— 这是当前唯一阻碍端到端演示的外部依赖。
+1. **端点未绑定公网路径（当前唯一的外部依赖）**：契约 §5 已把 `recordEvent`/`listEvents`/`generatePlan`/`getFunnel` 标为**「已实现（E2E2 验证通过）」**，但 CloudBase 侧未给这些 HTTP 函数绑定可访问路径 —— 实测 `https://zhiji-d3gd1k9j43e7c20ac.service.tcloudbase.com/*` 对 `/`、`/recordEvent`、`/api/recordEvent` 等全部返回 `INVALID_PATH`（主机名有效，路径未注册）。因此前端必须配置 `TARO_APP_CLOUDBASE_FN_BASE_URL` 才能真连；未配置时 health/dating 打卡禁用、方案页给出"生成失败"提示，均不伪造结果。`listPlans` 契约标注「未提供云函数」，方案列表改经 `cloud.rdb()` 读 `plans`。
 2. **exFAT + 依赖提升**：`G:` 不支持符号链接，故 `nodeLinker: hoisted`；`ajv` 家族 pin 到 v8（否则 root `ajv@6` 与 hoisted 的 `ajv-formats@3` 冲突，Taro 直接起不来）。首次安装用 `--no-frozen-lockfile`。
 3. **SDK 类型与运行时不一致**：`@cloudbase/js-sdk@3.10.3` 把 `auth`/`rdb` 声明为属性，运行时是函数。已在 `src/services/cloudbase.ts` 一次 `unknown` 断言收敛，业务代码无感。
 4. **H5 的 SDK 构建**：SDK 声明了 `"miniprogram": "miniprogram_dist"`，H5 产物里检测到小程序构建的标记（`wx.getSystemInfo`），webpack `mainFields` 覆盖未生效。功能上未验证受阻，但 H5 包体因此偏大、且 `signInWithWechat` 在浏览器端行为需 Phase 3 实机确认。

@@ -91,3 +91,28 @@ describe('体验埋点（A7）', () => {
     expect(plansForAppOpen()[0]?.payload).toBeUndefined()
   })
 })
+describe('体感/围度埋点（ADR-005-A / 契约 v1.5）', () => {
+  it('health.body_sense 打卡产出 health.body_sense 步', () => {
+    const steps = plansForCheckin('health', 'body_sense', { feel: 'ok' }, {
+      isFirstCheckin: false,
+      healthKindsToday: ['water'],
+    }).map((p) => p.step)
+    expect(steps).toEqual(['health.body_sense'])
+  })
+
+  it('首次记录时同时产出 onboard', () => {
+    const steps = plansForCheckin('health', 'body_sense', { waist_cm: 82 }, {
+      isFirstCheckin: true,
+      healthKindsToday: ['body_sense'],
+    }).map((p) => p.step)
+    expect(steps).toEqual(['health.onboard', 'health.body_sense'])
+  })
+
+  it('body_sense 不计入"三件套齐"派生（避免误发 active_day）', () => {
+    const steps = plansForCheckin('health', 'body_sense', { feel: 'tired' }, {
+      isFirstCheckin: false,
+      healthKindsToday: ['water', 'sleep', 'body_sense'],
+    }).map((p) => p.step)
+    expect(steps).toEqual(['health.body_sense'])
+  })
+})

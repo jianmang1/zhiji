@@ -33,12 +33,50 @@ async function accessToken(): Promise<string> {
   return token
 }
 
-function errorMessage(payload: unknown, status: number): string {
-  if (payload && typeof payload === 'object' && 'message' in payload) {
-    const message = (payload as { message?: unknown }).message
-    if (typeof message === 'string' && message.length > 0) return message
+/** 云函数 HTTP 调用失败（带状态码与网关错误码，便于区分"路径未绑定 / 未登录 / 服务异常"） */
+export class HttpFunctionError extends Error {
+  readonly status: number
+  readonly code: string | undefined
+
+  constructor(message: string, status: number, code?: string) {
+    super(message)
+    this.name = 'HttpFunctionError'
+    this.status = status
+    this.code = code
   }
-  return `云函数调用失败（HTTP ${status}）`
+}
+
+function payloadField(payload: unknown, key: 'message' | 'code'): string | undefined {
+  if (payload && typeof payload === 'object' && key in payload) {
+    const value = (payload as Record<string, unknown>)[key]
+    if (typeof value === 'string' && value.length > 0) return value
+  }
+  return undefined
+}
+
+/**
+ * 把函数返回归一为**可执行**提示。
+ * 尤其：CloudBase「HTTP 访问服务」未注册该路径时返回 404 + INVALID_PATH，
+ * 与"网络不通 / 未登录 / 服务异常"完全不同，必须给出可操作的下一步。
+ */
+export function describeHttpFailure(status: number, payload: unknown): string {
+  const code = payloadField(payload, 'code')
+  const message = payloadField(payload, 'message')
+
+  if (status === 404 && code === 'INVALID_PATH') {
+    return '云函数端点未绑定访问路径（INVALID_PATH）：请在 CloudBase 绑定 HTTP 访问路径，或核对 TARO_APP_CLOUDBASE_FN_BASE_URL'
+  }
+  if (status === 404) {
+    return message ?? '云函数不存在或路径错误（HTTP 404）'
+  }
+  if (status === 401 || status === 403) {
+    return message ?? '未登录或无权限调用云函数，请重新登录'
+  }
+  if (status >= 500) {
+    return message ?? `云函数服务异常（HTTP ${status}）`
+  }
+  if (message) return message
+  return `云函数调用失败（HTTP ${status}${code ? ` / ${code}` : ''}）`
 }
 
 export async function callHttpFunction<T>(name: string, body: Record<string, unknown>): Promise<T> {
@@ -56,7 +94,11 @@ export async function callHttpFunction<T>(name: string, body: Record<string, unk
   if (status === 200 || status === 201) {
     return response.data as T
   }
-  throw new Error(errorMessage(response.data, status))
+  throw new HttpFunctionError(
+    describeHttpFailure(status, response.data),
+    status,
+    payloadField(response.data, 'code'),
+  )
 }
 
 /** 云函数 recordEvent：{domain,type,ts,payload,source} → 201 {id} */
