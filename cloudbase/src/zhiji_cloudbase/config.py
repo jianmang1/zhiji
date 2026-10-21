@@ -18,11 +18,14 @@ def fernet_key() -> str:
 
 
 def llm_provider() -> str:
-    return os.getenv("TCB_AI_PROVIDER", "cloudbase").strip()
+    value = os.getenv("TCB_AI_PROVIDER", "").strip()
+    if not value:
+        raise RuntimeError("TCB_AI_PROVIDER is required")
+    return value
 
 
 def llm_model() -> str:
-    value = os.getenv("TCB_AI_MODEL", "hy3").strip()
+    value = os.getenv("TCB_AI_MODEL", "").strip()
     if not value:
         raise RuntimeError("TCB_AI_MODEL must not be empty")
     return value

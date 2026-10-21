@@ -105,6 +105,7 @@ class FakeGateway:
 def runtime_settings(monkeypatch):
     monkeypatch.setenv("TCB_ENV", "test-env")
     monkeypatch.setenv("FERNET_ENCRYPTION_KEY", Fernet.generate_key().decode())
+    monkeypatch.setenv("TCB_AI_PROVIDER", "cloudbase")
     monkeypatch.setenv("TCB_AI_MODEL", "hy3")
 
 
@@ -156,12 +157,20 @@ def test_score_engine_mirrors_frozen_weekly_thresholds_and_tiers():
     }
 
 
-def test_config_reads_runtime_values_and_has_safe_defaults(monkeypatch):
+def test_config_reads_runtime_values_and_requires_ai_settings(monkeypatch):
     monkeypatch.delenv("TCB_ENV_ID", raising=False)
     monkeypatch.setenv("TCB_ENV", "runtime-env")
     assert env_id() == "runtime-env"
     assert gateway_base_url() == "https://runtime-env.api.tcloudbasegateway.com"
     assert fernet_key()
+    monkeypatch.delenv("TCB_AI_PROVIDER", raising=False)
+    monkeypatch.delenv("TCB_AI_MODEL", raising=False)
+    with pytest.raises(RuntimeError, match="TCB_AI_PROVIDER"):
+        llm_provider()
+    with pytest.raises(RuntimeError, match="TCB_AI_MODEL"):
+        llm_model()
+    monkeypatch.setenv("TCB_AI_PROVIDER", "cloudbase")
+    monkeypatch.setenv("TCB_AI_MODEL", "hy3")
     assert llm_provider() == "cloudbase"
     assert llm_model() == "hy3"
 
@@ -452,7 +461,7 @@ def test_generate_plan_rejects_unsupported_filters():
     assert error["code"] == "bad_request"
 
 
-def test_generate_plan_rejects_invalid_model_schema_without_persisting():
+def test_generate_plan_falls_back_when_model_schema_is_invalid():
     gateway = FakeGateway(make_token())
     gateway.chat_response["choices"][0]["message"]["content"] = json.dumps(
         {
@@ -467,9 +476,12 @@ def test_generate_plan_rejects_invalid_model_schema_without_persisting():
         auth_headers(gateway.token),
         gateway_factory=lambda _token: gateway,
     )
-    assert status == 502
-    assert error["code"] == "upstream_error"
-    assert not gateway.rows
+    assert status == 201
+    assert error["ai_enabled"] is False
+    assert error["content"]["summary"].startswith("当前得分为")
+    plan = gateway.rows[-1]
+    assert plan["generated_by"] == "rules-fallback"
+    assert len(plan["content"]["actions"]) == 2
     status, error = dispatch(
         "generatePlan",
         {
@@ -482,6 +494,24 @@ def test_generate_plan_rejects_invalid_model_schema_without_persisting():
     )
     assert status == 400
     assert error["code"] == "bad_request"
+
+
+def test_generate_plan_falls_back_when_ai_gateway_is_unavailable():
+    class UnavailableGateway(FakeGateway):
+        def complete_chat(self, model, messages):
+            raise CloudBaseError("AI endpoint unavailable")
+
+    gateway = UnavailableGateway(make_token())
+    status, response = dispatch(
+        "generatePlan",
+        {"based_on": {"domain": "work"}},
+        auth_headers(gateway.token),
+        gateway_factory=lambda _token: gateway,
+    )
+    assert status == 201
+    assert response["ai_enabled"] is False
+    assert response["content"]["domain"] == "work"
+    assert gateway.rows[-1]["generated_by"] == "rules-fallback"
 
 
 def test_get_funnel_counts_ordered_steps_and_separates_reactivation():

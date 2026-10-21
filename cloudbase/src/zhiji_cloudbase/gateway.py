@@ -117,7 +117,7 @@ class CloudBaseGateway:
         offset = 0
         while True:
             params = [
-                ("select", "step,domain,channel,region,user_type,ts"),
+                ("select", "step,domain,channel,region,user_type,experiment_id,variant,ts"),
                 ("step", f"in.{step_filter}"),
                 ("ts", f"gte.{date_range['from']}"),
                 ("ts", f"lte.{date_range['to']}"),
