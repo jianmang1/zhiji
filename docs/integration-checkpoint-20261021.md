@@ -33,3 +33,11 @@ CloudBase Python 3.11 四个 HTTP 云函数已修复 Layer 导入路径并部署
 ## 可观测性限制
 
 `tcb fn log recordEvent --limit 10 --json` 返回 `ResourceNotFound.TopicNotExist`；环境未配置 CLS 日志 Topic，因此当前无法查询运行日志。没有为此启用计费日志服务。函数状态及上述真实 HTTP 调用均验证成功；CLS 配置留待环境负责人决定。
+
+## Tech Lead 签核（2026-10-21 10:54）
+
+- 已基于远端真实状态核实：`origin/feat/getfunnel-deploy = 4019051`；E2E2 四项验收（recordEvent 写入 201 / listEvents 读取 200 闭环、getFunnel 7 步 200、generatePlan 201 且读回含 `actions`、A/B 隔离：B 看不到 A 的事件与方案）全部通过；本地 23 测试通过，工作树干净。
+- 已合并 PR #1 至 `main`（merge commit `a3588cb`，非 ff，22 文件 +1026/-69）；`origin/main` 现含完整前端（PR #2，d8c041b）+ 后端四 HTTP 函数部署 + getFunnel + 评分引擎 + 本检查点。
+- v1 后端部署验收**闭环**。唯一未决项：环境未配置 CLS Topic，运行日志不可查——不影响已通过的真实 HTTP 调用验证；CLS 配置留待环境负责人决定，不阻塞 v1。
+- 结论：**v1（三王小程序前端 + CloudBase 后端）达到派发要求的部署验收条件，PR #1 关闭。**
+- 后续自治事项（Phase 3 之前不阻塞 v1）：跨用户 cohort 汇总（ADR 已裁定 Phase 3）、CLS 可观测性、generatePlan 的 AI 能力额度监控。
