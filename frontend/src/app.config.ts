@@ -1,4 +1,6 @@
 export default defineAppConfig({
+  // 按页面实际使用注入原生组件，减少启动时加载的组件代码。
+  lazyCodeLoading: 'requiredComponents',
   pages: [
     'pages/login/index',
     'pages/entry/index',

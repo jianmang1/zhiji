@@ -12,7 +12,9 @@ const config: UserConfigExport = {
   deviceRatio: { 375: 2, 640: 1.17, 750: 1, 828: 0.905 },
   sourceRoot: 'src',
   // 双端产物分开落盘，互不覆盖，便于分别验证/上传。
-  outputRoot: `dist/${process.env.TARO_ENV}`,
+  outputRoot: process.env.TARO_OUTPUT_ROOT ?? (process.env.TARO_ENV === 'weapp'
+    ? 'dist/weapp-staging'
+    : `dist/${process.env.TARO_ENV}`),
   plugins: [],
   defineConstants: {},
   copy: { patterns: [], options: {} },
@@ -23,6 +25,13 @@ const config: UserConfigExport = {
   },
   cache: { enable: false },
   mini: {
+    compile: {
+      // CloudBase SDK's distributed bundles include optional chaining/nullish
+      // coalescing that the WeChat simulator parser may not accept directly.
+      include: [
+        (filename: string) => /node_modules[\\/](?:@cloudbase[\\/]|@mattiasbuelens[\\/]|bson[\\/]|jwt-decode[\\/]|web-streams-polyfill[\\/]|text-encoding-shim[\\/]|zod[\\/])/.test(filename),
+      ],
+    },
     postcss: {
       pxtransform: { enable: true, config: {} },
       cssModules: { enable: false },

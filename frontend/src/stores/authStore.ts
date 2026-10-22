@@ -33,17 +33,17 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ status: 'restoring', error: null })
     try {
       const auth = getAuth()
-      const result = await auth.signInWithWechat()
+      const result = await auth.signInWithOpenId({ useWxCloud: false })
       if (result.error) {
         set({ status: 'error', error: result.error.message ?? '微信登录失败' })
         return false
       }
 
-      let userId = result.data.user?.uid ?? null
+      let userId = result.data.user?.id ?? result.data.user?.uid ?? null
       if (!userId) {
-        // signInWithWechat 可能只回写会话，补一次 getSession 取 uid
+        // signInWithOpenId 可能只回写会话，补一次 getSession 取 uid
         const session = await auth.getSession()
-        userId = session.error ? null : session.data.user?.uid ?? null
+        userId = session.error ? null : session.data.user?.id ?? session.data.user?.uid ?? null
       }
       if (!userId) {
         set({ status: 'error', error: '登录成功但未取得 user id' })
@@ -73,7 +73,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const auth = getAuth()
       const result = await auth.getSession()
-      const userId = result.error ? null : result.data.user?.uid ?? null
+      const userId = result.error ? null : result.data.user?.id ?? result.data.user?.uid ?? null
       if (userId) {
         storage.set(USER_ID_KEY, userId)
         set({ status: 'authenticated', userId, error: null })

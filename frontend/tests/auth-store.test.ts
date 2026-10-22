@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const h = vi.hoisted(() => ({
-  signInWithWechat: vi.fn(),
+  signInWithOpenId: vi.fn(),
   getSession: vi.fn(),
   signOut: vi.fn(),
   store: new Map<string, unknown>(),
@@ -21,7 +21,7 @@ vi.mock('@tarojs/taro', () => ({
 
 vi.mock('../src/services/cloudbase', () => ({
   getAuth: () => ({
-    signInWithWechat: h.signInWithWechat,
+    signInWithOpenId: h.signInWithOpenId,
     getSession: h.getSession,
     signOut: h.signOut,
   }),
@@ -32,7 +32,7 @@ const { useAuthStore } = await import('../src/stores/authStore')
 function reset(): void {
   useAuthStore.setState({ status: 'idle', userId: null, error: null })
   h.store.clear()
-  h.signInWithWechat.mockReset()
+  h.signInWithOpenId.mockReset()
   h.getSession.mockReset()
   h.signOut.mockReset()
 }
@@ -41,8 +41,8 @@ describe('authStore', () => {
   beforeEach(reset)
 
   it('微信登录成功后记录 user_id 并只缓存非敏感快照', async () => {
-    h.signInWithWechat.mockResolvedValue({
-      data: { user: { uid: 'u-1' }, session: { access_token: 'secret' } },
+    h.signInWithOpenId.mockResolvedValue({
+      data: { user: { id: 'u-1' }, session: { access_token: 'secret' } },
       error: null,
     })
 
@@ -56,7 +56,7 @@ describe('authStore', () => {
   })
 
   it('登录返回错误时进入 error 态并暴露文案', async () => {
-    h.signInWithWechat.mockResolvedValue({ data: {}, error: { message: '用户取消授权' } })
+    h.signInWithOpenId.mockResolvedValue({ data: {}, error: { message: '用户取消授权' } })
 
     const ok = await useAuthStore.getState().login()
 
@@ -66,9 +66,9 @@ describe('authStore', () => {
     expect(h.store.size).toBe(0)
   })
 
-  it('signInWithWechat 未回传 uid 时回退 getSession', async () => {
-    h.signInWithWechat.mockResolvedValue({ data: { session: {} }, error: null })
-    h.getSession.mockResolvedValue({ data: { user: { uid: 'u-2' } }, error: null })
+  it('signInWithOpenId 未回传用户时回退 getSession 读取 id', async () => {
+    h.signInWithOpenId.mockResolvedValue({ data: { session: {} }, error: null })
+    h.getSession.mockResolvedValue({ data: { user: { id: 'u-2' } }, error: null })
 
     const ok = await useAuthStore.getState().login()
 
@@ -77,7 +77,7 @@ describe('authStore', () => {
   })
 
   it('登出后清空本地快照', async () => {
-    h.signInWithWechat.mockResolvedValue({ data: { user: { uid: 'u-1' } }, error: null })
+    h.signInWithOpenId.mockResolvedValue({ data: { user: { id: 'u-1' } }, error: null })
     h.signOut.mockResolvedValue({ error: null })
     await useAuthStore.getState().login()
 
@@ -89,7 +89,7 @@ describe('authStore', () => {
   })
 
   it('restore 读取 SDK 会话；无会话时清除残留快照', async () => {
-    h.getSession.mockResolvedValue({ data: { user: { uid: 'u-3' } }, error: null })
+    h.getSession.mockResolvedValue({ data: { user: { id: 'u-3' } }, error: null })
     await useAuthStore.getState().restore()
     expect(useAuthStore.getState().status).toBe('authenticated')
     expect(useAuthStore.getState().userId).toBe('u-3')

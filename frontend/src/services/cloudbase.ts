@@ -53,6 +53,9 @@ export class CloudFunctionUnavailableError extends Error {
 /* ─────────────────────────────── 运行时接口 ─────────────────────────────── */
 
 export interface AuthUser {
+  /** CloudBase SDK User.id maps to auth.uid(). */
+  id?: string
+  /** Legacy compatibility for auth responses exposing uid. */
   uid?: string
   openid?: string
   name?: string
@@ -80,7 +83,7 @@ export interface SignInResultLike {
 
 export interface AuthRuntime {
   /** 微信登录集成（契约 §1：登录走 cloud.auth，不签发/不存储 JWT） */
-  signInWithWechat(): Promise<SignInResultLike>
+  signInWithOpenId(options?: { useWxCloud?: boolean }): Promise<SignInResultLike>
   /** 读取 SDK 自己持久化的会话 */
   getSession(): Promise<SignInResultLike>
   getUser(): Promise<AuthResultLike>
