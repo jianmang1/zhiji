@@ -66,7 +66,7 @@
 
 ## 3. 各域 type 与 payload 草案（v1 三王）
 
-- **health（薄肌王）**：`water{ml}` / `sleep{duration_h,quality}` / `workout{type,duration_min,calorie}` / `body_sense{waist_cm?:number, feel?:enum('great','ok','tired'), note?:text}`（ADR-005 采纳 A，2026-10-21；零迁移）
+- **health（薄肌王）**：`water{ml}` / `sleep{duration_h,quality}` / `workout{type,duration_min,calorie}` / `body_sense{waist_cm?:number, feel?:enum('great','ok','tired'), feel_score?:int CHECK 1..10, note?:text}`（ADR-005 采纳 A，2026-10-21；零迁移）/ **`suppression{score:int CHECK 0..10, note?:text}`**（ADR-007，2026-10-22；越低越好：做了不想做的事/没做想做的事→下降值，随心所欲做了→上升值；零迁移，`events.type` 为自由 text）
 - **work（力王）**：`work_log{hours,wage,salary,commute_min}`
 - **dating（黄毛王·异性交往）**：
   - `approach` 主动搭讪：`{count:int≥1, channel:enum('online','offline','social'), got_response:bool}`

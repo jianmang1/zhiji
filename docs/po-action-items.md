@@ -2,27 +2,26 @@
 
 > 由「执己 Phase3 自主心跳」每轮覆盖更新。列出需要你（PO）介入的事项：拍板决策、唤醒 Codex/DeepSeek 会话。其余执行类问题由三方在 Aurora KB 自治闭环，不在此列。
 > 格式：🔴 拍板 / 🟡 唤醒 Codex（CloudBase 凭证） / 🟢 唤醒 DeepSeek（前端）。
-> 本轮回合：2026-10-22T08:20+08:00（第 26 轮）。
+> 本轮回合：2026-10-22T18:05+08:00（第 27 轮 · 漏斗重构派发）。
 
 ## 📌 本轮核验结论（Tech Lead 自治核验）
-- **网络正常**：本轮 `git fetch origin` 成功。`origin/main = 5f8df48`（= 第 25 轮心跳文档 ff 推送落点；本地 `main` 同步、工作树干净）；`git log origin/main ^d6af77d` 仅 1 条第 25 轮心跳文档（`5f8df48`）→ 自第 25 轮后**无功能性新提交**。
-- 权威核验（ls-remote）：heads 仅已知 9 条 `feat/*` + `docs/privacy-kb-approval` + `main`（无新增分支）；`refs/pull/*/head` 仅 #1–#10（**无 #11+**）；10 条 `feat/*` + `docs/privacy-kb-approval` 经 **哈希级 `merge-base --is-ancestor` 全回 `MERGED`** → **无未决 OPEN PR、无未合并分支**。`recover/techlead-quarantine-20261021` 不在远端（预期，DO NOT MERGE）。
-- A 类全闭环（A1–A6 = Codex PR#9；A2/A7/A8 + plans/diagnostics/body_sense = DeepSeek PR#4/#6/#7/#8），B 类全闭环（B1–B5 + ADR-006 隐私裁定 PR#10）。
-- `FERNET_ENCRYPTION_KEY`：据 `integration-checkpoint-20261021.md` L131 核对，控制台已恢复配置；但**恢复后 health/dating 加密读写 E2E 仍未复测**（需应用侧测试用户登录态，控制台登录态不可替代）。
-- 校正：第 25 轮 `po-action-items.md` 文本所记 `origin_main=d6af77d` 已过时——该轮实际落点已 ff 推送至 `5f8df48`，本轮以 ls-remote 权威值 `5f8df48` 为准。
+- **origin/main = 5f8df48**（工作树有前端源码未提交改动，见下）。
+- **产品重构已拍板（ADR-007 Accepted）**：保留漏斗、产品级 AARRR 改名「王败寇」（五层：陌生人/好奇猫/留存>3天/落魄谷>10天/少年归到底>10次，社区人数占位）、薄肌王漏斗四层（喝大水+睡大觉→运动→压抑指标→体感1–10，最终层=自己体感）、砍分群运营、力王/黄毛王暂不动。
+- **派发 DeepSeek 两项**（见 🟢）：体验优化（自动保存草稿 + 感觉类拖条）、漏斗重构（王败寇改名 + 薄肌王四层 + 砍分群运营）。
+- **你（PO）的前端登录重构**：工作树未提交改动将 `signInWithWechat` 改为 `signInWithOpenId({useWxCloud:false})`、appid 改为 `wx1e5b9e6f10ca3683`、构建产物改 `dist/weapp-staging`、加 `lazyCodeLoading`——这正是绕开此前 `wx.cloud` `invalid appid` 的修法，属合法重要改动，本轮一并入库（不覆盖）。
 
 ## 🔴 拍板 / 授权事项（需你决策）
-- **本轮无新增拍板项。** 历史 B 类（B1–B5）与 ADR-006 隐私裁定（本期不开放跨用户 cohort）均已裁决闭环，无遗留动作。
+- **本轮无新增拍板项。** ADR-007 已你裁定闭环。历史 B 类（B1–B5）+ ADR-006 隐私裁定均闭环。
+- **可延后**：王败寇"社区人数"为占位数字（不实聚合，ADR-006 冻结维持）；若未来要真聚合需另升隐私裁定。
 
 ## 🟡 需唤醒 Codex 会话（CloudBase 凭证类）
-- **health/dating 加密读写 E2E（已派发 `tech-lead-directive-e2e-health-dating-20261021.md`）**：`FERNET_ENCRYPTION_KEY` 已恢复；E2E 需 **你（PO）在前端用测试账号保持登录** 驱动 health(`body_sense`)+dating 写入并回读明文，Codex 做服务端密文/解密/RLS 隔离核验（路线 A 零 token 外传；或路线 B 你把前端 token 直接给 Codex，不经 Tech Lead）。
-  - **在哪个 Codex 会话运行**：已登录 CloudBase 的 Codex 会话（与 PR#9 同一 CloudBase 环境）。
-  - **读哪个 KB 文件**：`docs/tech-lead-directive-e2e-health-dating-20261021.md`（§0 token 边界 / §1 前提确认 / §2 两条路线 / §3 证据与门禁）。
-  - 完成后 Codex 补录 `integration-checkpoint-20261021.md` 敏感域段落，Tech Lead 按门禁复核合并。
-- A1/A3/A4/A5/A6 已全部随 PR#9 合并，**无需再唤醒**；A5 隐私决定已记录为本期不开放跨用户 cohort。
+- **health/dating 加密读写 E2E（directive 已派发 2026-10-21）**：`FERNET_ENCRYPTION_KEY` 已恢复。**前置**：需有人在前端用真实账号成功登录并写入 health(`body_sense`)+dating 后回读明文。当前**登录修复由你（PO）直接在前端迭代**（`signInWithOpenId`），待你登录跑通并完成 health/dating 打卡，再唤醒 Codex 做服务端密文/解密/RLS 隔离核验（token 仅前端↔Codex，不经 Tech Lead）。
+- A1/A3/A4/A5/A6 已随 PR#9 合 main，**无需再唤醒**。
 
-## 🟢 唤醒 DeepSeek 会话（前端待办）
-> **DeepSeek 当前无任何待办。** 前端链路（A2/A7/A8/plans/diagnostics/body_sense）已全部合入 main（PR#4/#6/#7/#8），B5=A 已落地。无需唤醒。
+## 🟢 唤醒 DeepSeek 会话（前端待办 · 两项已派发）
+- **① 体验优化**（`docs/tech-lead-directive-ux-20261022.md`）：离开页面自动保存打卡草稿（防丢"记下这一笔"）+ 感觉/体感类输入改拖条（含新增 `suppression.score` 0–10、`body_sense.feel_score` 1–10）。**纯前端 UX，不碰契约。**
+- **② 漏斗重构**（`docs/tech-lead-directive-funnel-redesign-20261022.md`）：依据 ADR-007 —— 王败寇改名 + 五层重命名/阈值 + 占位社区人数；薄肌王四层漏斗（终层=体感1–10）+ `suppression` 录入；**砍掉分群运营页与 tabBar 入口**；力王/黄毛王暂不动。
+- **注意**：两项均**不要改 `cloudbase.ts`/`authStore.ts`**（PO 登录重构中，以其版本为准）。分支建议 `feat/frontend-ux-20261022` 与 `feat/frontend-funnel-redesign-20261022`，各自提 PR。
 
 ## 本轮结论
-**`origin/main = 5f8df48`（本轮 fetch 成功；ls-remote 权威核验无新增分支、refs/pull 仅 #1–#10 无 #11+、10 条 feat/* + docs/privacy-kb-approval 全部哈希级合 main、工作树干净；自第 25 轮落点 d6af77d 后仅 1 条心跳文档提交、无功能性新提交）。** A/B 类全闭环。剩余唯一活项：**🟡 唤醒 Codex 执行 health/dating 加密读写 E2E** ——需你（PO）在前端用测试账号保持登录驱动真实用户路径，Codex 做服务端密文/解密/RLS 隔离核验（directive 已派发）。token 边界：仅前端↔Codex，不经 Tech Lead。本轮无新增拍板/待办，心跳每轮刷新本文件。
+ADR-007 已裁定（漏斗保留 + 王败寇 + 薄肌王体感终层 + 砍分群运营），两份 DeepSeek 派发指令已就位（🟢）。你（PO）正在前端直接修登录（`signInWithOpenId`，绕开 wx.cloud invalid appid），本轮把该合法改动连同 KB 文档一并入库。**唯一仍待你驱动的活项**：登录跑通后做 health/dating 打卡 → 唤醒 Codex 做加密读写 E2E 服务端核验。

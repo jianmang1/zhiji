@@ -910,3 +910,23 @@ FERNET 密钥恢复（控制台）已确认；health/dating 加密读写 E2E 已
 
 ### 5. 本轮结论
 `origin/main = 5f8df48`（本轮 fetch 成功；ls-remote 权威核验无新增分支、refs/pull 仅 #1–#10 无 #11+、10 条 feat/* + docs/privacy-kb-approval 全部哈希级合 main、工作树干净；自第 25 轮落点 d6af77d 后仅 1 条心跳文档提交、无功能性新提交）。A/B 类全闭环。唯一活项 = health/dating 加密读写 E2E，待 PO 前端登录 + Codex 服务端核验（token 不经 Tech Lead）。本轮无新增拍板/待办。待 PO 处理清单见 `docs/po-action-items.md`（第 26 轮）。
+
+---
+
+## 第 27 轮 · 2026-10-22T18:05+08:00（Tech Lead 自治 · 漏斗重构派发 + 前端登录重构入库）
+
+### 0. 触发
+- PO E2E 体验后给出产品反馈：看板好；漏斗意义不明/不能突出转化；AARRR+召回环不知有何用；分群运营没用。经讨论澄清：保留漏斗（埋点模拟转化展示），产品级 AARRR 改名「王败寇」，薄肌王漏斗以「自己体感1–10」为终层，各层记录真实数据长期累积。
+- PO 经 AskUserQuestion 四项确认：力王/黄毛王暂保留不动、分群运营砍掉、王败寇社区人数用占位数字（不实聚合，ADR-006 维持）、压抑指标新增 `suppression` 类型。
+
+### 1. 派发产物（KB）
+- **ADR-007（Accepted）**：漏斗重构——保留漏斗可视化；王败寇五层（陌生人/好奇猫/留存>3天/落魄谷>10天/少年归到底>10次，社区人数占位）；薄肌王四层（喝大水+睡大觉→运动→压抑指标→体感1–10）；砍分群运营；力王/黄毛王暂不动。契约 §3 新增 `suppression` + `body_sense.feel_score`（零迁移，Codex 零改）。
+- **派发 DeepSeek 两项**：`tech-lead-directive-ux-20261022.md`（自动保存草稿 + 感觉类拖条）、`tech-lead-directive-funnel-redesign-20261022.md`（王败寇改名 + 薄肌王四层 + 砍分群运营）。
+- 同步更新 `product-definition.md` §15、`cloudbase-contract.md` §3、`po-action-items.md`（第27轮）。
+
+### 2. 前端登录重构（PO 直接迭代，本轮入库）
+- 工作树未提交改动：将 `signInWithWechat()` 改为 `signInWithOpenId({useWxCloud:false})`（绕开此前 `wx.cloud` `invalid appid`）；appid 改为 `wx1e5b9e6f10ca3683`；构建产物改 `dist/weapp-staging`（`config/index.ts` 加 `TARO_OUTPUT_ROOT`）；`app.config.ts` 加 `lazyCodeLoading`。属合法重要改动，单独提交保护，不覆盖。
+
+### 3. 门禁与下一步
+- 两份 DeepSeek 派发指令均要求 `typecheck`+`test` 全绿后提 PR；且明确**勿改 `cloudbase.ts`/`authStore.ts`**（PO 登录重构中）。
+- 剩余活项：PO 登录跑通后做 health/dating 打卡 → 唤醒 Codex 做加密读写 E2E 服务端核验。
