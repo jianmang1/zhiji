@@ -137,6 +137,28 @@
   font-weight: 800;
 }
 
+.funnel__done {
+  font-size: 10px;
+  background: #39ff14;
+  color: var(--ink);
+  padding: 1px 6px;
+  border: 2px solid var(--ink);
+  font-weight: 800;
+}
+
+.funnel__community {
+  border: 3px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
+  background: #fff7cc;
+  padding: 8px 12px;
+}
+
+.funnel__communityText {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
 .funnel__stepNums {
   display: flex;
   flex-direction: column;

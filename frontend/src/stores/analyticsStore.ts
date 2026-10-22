@@ -8,7 +8,7 @@ import {
   selectProfile,
   upsertProfile,
 } from '../services/rdb'
-import { isCloudFunctionConfigured, loadDashboardData } from '../services/events'
+import { isCloudFunctionConfigured, listEventsRemote, loadDashboardData } from '../services/events'
 import { fetchRemoteFunnels, funnelRange } from '../services/funnelApi'
 import {
   buildFunnelReports,
@@ -158,16 +158,30 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     try {
       const rows = await selectAnalyticsEvents(500)
       const { segment } = get()
-      let funnel = buildFunnelReports(rows, segment)
+      // 薄肌王漏斗始终基于真实打卡 events（ADR-007 Task2）；其余三层走云/本地聚合
+      let healthEvents: EventRow[] = []
+      if (isCloudFunctionConfigured()) {
+        try {
+          healthEvents = await listEventsRemote({ domain: 'health', limit: 500 })
+        } catch {
+          healthEvents = []
+        }
+      }
+      const baseFunnel = buildFunnelReports(rows, segment, healthEvents)
+      let funnel = baseFunnel
       let funnelSource: 'local' | 'cloud' = 'local'
 
       if (isCloudFunctionConfigured()) {
         try {
-          funnel = await fetchRemoteFunnels(segment, funnelRange())
+          const remote = await fetchRemoteFunnels(segment, funnelRange())
+          // 用真实事件漏斗替换云端 analytics 版（薄肌王基于 events，不依赖埋点）
+          const healthReport = baseFunnel.find((r) => r.key === 'health')
+          funnel = remote.map((report) => (report.key === 'health' ? (healthReport ?? report) : report))
           funnelSource = 'cloud'
         } catch {
           // 云函数不可用（未部署 / 网络 / 鉴权）→ 回退本地计算；不伪造数据
-          funnel = buildFunnelReports(rows, segment)
+          funnel = baseFunnel
+          funnelSource = 'local'
         }
       }
 
