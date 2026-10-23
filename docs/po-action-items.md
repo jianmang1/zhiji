@@ -2,7 +2,7 @@
 
 > 由「执己 Phase3 自主心跳」每轮覆盖更新。列出需要你（PO）介入的事项：拍板决策、唤醒 Codex/DeepSeek 会话。其余执行类问题由三方在 Aurora KB 自治闭环，不在此列。
 > 格式：🔴 拍板 / 🟡 唤醒 Codex（CloudBase 凭证） / 🟢 唤醒 DeepSeek（前端）。
-> 本轮回合：2026-10-22T18:30+08:00（第 28 轮 · 漏斗重构 + UX 派发已落地）。
+> 本轮回合：2026-10-23T10:42+08:00（第 29 轮 · 登录跑通 + 上传完成 · 唤醒 Codex 加密 E2E）。
 
 ## 📌 本轮核验结论（Tech Lead 自治核验）
 - **origin/main = aa1911d**（本轮 `--no-ff` 合并提交）；本次前端实现位于分支 **`feat/frontend-ux-funnel-20261022`**（commit `f233355` + KB `28bea26`），**PR #11 已由 PO 开并经 Tech Lead 复核合并入 main**。
@@ -19,7 +19,7 @@
 - **可延后**：王败寇"社区人数"为占位数字（不实聚合，ADR-006 冻结维持）；若未来要真聚合需另升隐私裁定。
 
 ## 🟡 需唤醒 Codex 会话（CloudBase 凭证类）
-- **health/dating 加密读写 E2E（directive 已派发 2026-10-21）**：`FERNET_ENCRYPTION_KEY` 已恢复。**前置**：需有人在前端用真实账号成功登录并写入 health(`body_sense`/`suppression`)+dating 后回读明文。当前**登录修复由你（PO）直接在前端迭代**（`signInWithOpenId`），待你登录跑通并完成 health/dating 打卡，再唤醒 Codex 做服务端密文/解密/RLS 隔离核验（token 仅前端↔Codex，不经 Tech Lead）。
+- **health/dating 加密读写 E2E（directive 已派发 2026-10-21，2026-10-23 激活）**：`FERNET_ENCRYPTION_KEY` 已恢复；**前置已于 2026-10-23 满足——PO 报告登录跑通 + 小程序已上传**。已升级指令为"激活"，请 Codex 按**路线 A**执行：PO 在前端用已登录账号写 health(`body_sense`/`suppression`)+dating 并回读明文 → Codex 服务端核验 PG 密文落库 + 同密钥解密 + RLS 按 uid 隔离。token 仅前端↔Codex，不经 Tech Lead（见 directive §0/§5）。
 - A1/A3/A4/A5/A6 已随 PR#9 合 main，**无需再唤醒**。
 
 ## 🟢 唤醒 DeepSeek 会话（前端待办）
@@ -27,4 +27,4 @@
 - **后续前端活项（PO/DeepSeek 待定）**：力王/黄毛王漏斗照搬薄肌王思路重构（ADR-007 §5 暂留）；suppression/feel_score 录入后的评分与 AI 意见联动（当前仅落库，未进评分引擎）。
 
 ## 本轮结论
-ADR-007 + 两份前端派发指令已全部落地实现并通过门禁、合并入 `main`（`aa1911d`，分支 `feat/frontend-ux-funnel-20261022`）。**唯一仍待你驱动的活项**：登录跑通后做 health/dating 打卡 → 唤醒 Codex 做加密读写 E2E 服务端核验。
+ADR-007 + 两份前端派发指令已落地并合并入 `main`（`aa1911d`，PR #11）。**里程碑达成**：PO 报告登录（`signInWithOpenId`）跑通 + 小程序已上传。**Codex 加密 E2E 已唤醒**（directive 2026-10-23 激活，路线 A）：待 PO 在前端用已登录账号写 health(`body_sense`/`suppression`)+dating 并回读明文，Codex 做服务端密文落库/解密/RLS 隔离核验。完成后 Codex 回写 checkpoint，Tech Lead 复核合并。

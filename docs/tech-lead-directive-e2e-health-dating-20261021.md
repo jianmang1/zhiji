@@ -1,6 +1,6 @@
 # Tech Lead 指令 · health/dating 加密读写 E2E 派发（2026-10-21）
 
-> 状态：可执行。`FERNET_ENCRYPTION_KEY` 已在 CloudBase 控制台恢复（`recordEvent`/`listEvents`/`generatePlan` 环境变量已配置，见 `integration-checkpoint-20261021.md` 核对记录）。本指令派发恢复后的敏感域加密读写 E2E 复测。token 边界见 §0。
+> 状态：**激活 · 2026-10-23 唤醒**。前置已满足——PO 报告登录已跑通且已上传小程序；`FERNET_ENCRYPTION_KEY` 此前已恢复。`recordEvent`/`listEvents`/`generatePlan` 环境变量已配置（见 `integration-checkpoint-20261021.md`）。请 Codex 按 **路线 A** 执行服务端加密读写 E2E 核验（用户已可用真实账号写入 health/dating 数据）。token 边界见 §0。
 
 ## 0. token 边界（硬约束，PO 明确要求）
 - **腾讯云控制台登录态 ≠ 应用侧用户 token**。E2E 所需的「测试用户登录态（CloudBase access token）」只能由前端（小程序/H5）在用户登录后产生。
@@ -37,3 +37,12 @@
 
 ## 4. 不升 PO
 E2E 复测属执行层闭环；密钥恢复与隐私裁定（ADR-006 本期不开放跨用户 cohort）均已定。仅 heartbeat-log 记录进展。
+
+## 5. 唤醒记录（2026-10-23 · Tech Lead 派发）
+- **前置满足**：PO 报告 `signInWithOpenId` 登录已跑通（真机/开发者工具拿到真实 uid+token），且小程序已上传微信后台。冻结的 `cloudbase.ts`/`authStore.ts` 未被破坏，登录链路以 PO 版本为准。
+- **动作**：指令由"可执行但等登录"升级为"激活"。Codex 无需持有 token，按路线 A 执行：
+  1. 等待/提示 PO 在前端用已登录账号写入：薄肌王 `body_sense`（腰围 cm + `feel_score` 拖条 1–10 + 可选 `suppression` 压抑值 0–10）+ 黄毛王 `dating` 各至少一条；并在 App 内 `listEvents` 回读确认看到明文。
+  2. 服务端核验：PG `events` 该用户 health/dating 行 `payload` 为 Fernet 密文（非 JSON 明文）；用函数环境同款 `FERNET_ENCRYPTION_KEY` 解密样本验证；RLS 隔离（无用户/其他用户上下文读不到该用户行）。
+  3. 补录 `integration-checkpoint-20261021.md` 敏感域段落：状态码、脱敏响应、耗时、密文样本（脱敏）、解密回读结果、RLS 隔离结果。
+- **门禁**：远端 + 可复现 + 不伪造；token 不进任何 KB/PR。
+- **回写**：完成后在 KB 写结果 → Tech Lead 复核合并。

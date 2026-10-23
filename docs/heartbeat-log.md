@@ -987,3 +987,27 @@ FERNET 密钥恢复（控制台）已确认；health/dating 加密读写 E2E 已
 - **性质**：scope 纯前端、无 CloudBase 凭证需求 → 落入「无需凭证即可合并」自治范围（第 27 轮裁定）。PO 登录重构文件（cloudbase.ts/authStore.ts）未被触碰。
 - **PR 自动闭环**：合并提交进 main 后，GitHub 已将该 PR（**#11**）标为 merged。
 - **收尾建议（PO 可选）**：此前遗留的 open PR#6/#7 为 PR#8 祖先（内容已含于 main），可到 Pull requests 页关闭以免混淆。
+
+---
+
+## 第 29 轮 · 2026-10-23T10:42+08:00（PO 登录跑通 + 上传 · 唤醒 Codex 加密 E2E）
+
+### 0. 触发
+- PO 报告 **登录（`signInWithOpenId`）已跑通**且**小程序已上传微信后台**；并澄清"GPT 重构代码质量过上传要求"= 已入库的 `dc3b242`（PO 昨晚经 GPT 修改后提交：config/index.ts 加 TARO_OUTPUT_ROOT → dist/weapp-staging；project.config.json 设 appid=wx1e5b9e6f10ca3683 + miniprogramRoot=dist/weapp-staging）。
+- 据此，**长期 Block 项（health/dating 加密 E2E 的"真实用户登录态"前置）已满足** → 唤醒 Codex 执行服务端核验。
+
+### 1. 事实核对
+- 工作树干净；`HEAD==origin/main==93ad8fc`。`dc3b242`（GPT 重构）已在 main，门禁此前已在其上实测全绿（tsc 0 / vitest 129/129 / build 通过）。
+- 重跑 `npm run build:weapp` → exit 0（仅 vendors.js 992KiB 体积告警）；`dist/weapp-staging` 刷新至 10-23 10:38，**已含 #11 最新代码**（app.json 5 页、segments 已删、tabBar 4 项）。
+- 登录"跑通"+上传为 PO 在开发者工具侧的用户报告，由 Codex 服务端核验（密文落库 + RLS）作为客观证据交叉确认。
+
+### 2. 唤醒 Codex（directive 升级）
+- `docs/tech-lead-directive-e2e-health-dating-20261021.md` 状态由"可执行等登录"→ **"激活 · 2026-10-23 唤醒"**；新增 §5 唤醒记录：路线 A，Codex 不需 token，待 PO 写 health(`body_sense`/`suppression`)+dating 后核验 PG 密文 + 同密钥解密 + RLS 按 uid 隔离，补录 checkpoint。
+- token 边界维持（§0）：仅前端↔Codex，不经 Tech Lead；不进 KB/PR。
+
+### 3. 待 PO 下一步（用户侧）
+- 前端已登录：薄肌王选 `body_sense`（腰围 cm + `feel_score` 拖条 1–10 + 可选 `suppression` 压抑值 0–10）提交；黄毛王选 `dating` 提交；App 内 `listEvents` 回读确认看到明文。
+- 完成后告知（或 Codex 直接查 PG），Codex 执行服务端核验并回写 checkpoint。
+
+### 4. 本轮结论
+登录跑通 + 上传完成是 Phase3 关键里程碑；Codex 加密 E2E 已正式唤醒（路线 A）。**剩余**：PO 写一条 health + 一条 dating 打卡 → Codex 服务端核验密文/解密/RLS → 回写 checkpoint → Tech Lead 复核合并。冻结文件 `cloudbase.ts`/`authStore.ts` 未被破坏。
