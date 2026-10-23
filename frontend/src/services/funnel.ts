@@ -4,7 +4,7 @@
  * 契约 §8 / 产品定义 §15：v1 由前端拉 analytics_events 本地算基础漏斗；
  * getFunnel 云函数属 Phase 3，未标「已实现」前不接。
  */
-import type { AnalyticsEventRow, Domain, FunnelStep } from '../types/contract'
+import type { AnalyticsEventRow, Domain, EventRow, FunnelStep } from '../types/contract'
 
 /** 产品级 AARRR（§15.1 ①）；product.reactive 为召回环，单独展示不计入主漏斗 */
 export const PRODUCT_FUNNEL: readonly FunnelStep[] = [
@@ -40,11 +40,12 @@ export const KING_FUNNELS: Readonly<Record<Domain, readonly FunnelStep[]>> = {
 }
 
 export const STEP_LABELS: Readonly<Record<FunnelStep, string>> = {
-  'product.acquire': '获取',
-  'product.activate': '激活',
+  // 产品级漏斗改名「王败寇」（ADR-007）：社交证明向，展示"多少人在记录"
+  'product.acquire': '陌生人',
+  'product.activate': '好奇猫',
   'product.retain': '留存',
-  'product.habit': '习惯',
-  'product.value': '价值',
+  'product.habit': '落魄谷',
+  'product.value': '少年归',
   'product.refer': '推荐',
   'product.reactive': '召回/复活',
   'dating.onboard': '启动',
@@ -76,6 +77,8 @@ export interface FunnelStepStat {
   conversionFromPrev: number
   /** 单步流失率 % */
   dropOffPct: number
+  /** ADR-007：阈值型层是否已达成（如"记录天数 > 3"）。仅王败寇/行为漏斗的语义层使用 */
+  achieved?: boolean
 }
 
 export interface FunnelReport {
@@ -157,17 +160,139 @@ export function filterBySegment(
   })
 }
 
-/** 生成两层漏斗：产品级 + 三王 */
+/**
+ * 王败寇（原产品级 AARRR 改名 · ADR-007）：社交证明向，五层阶梯。
+ * 基于该用户自己的 analytics_events 派生：
+ *   L1 陌生人 = 进站/首触（product.acquire 次数）
+ *   L2 好奇猫 = 激活（product.activate 次数）
+ *   L3 留存   = 记录数据天数 > 3
+ *   L4 落魄谷 = 记录数据天数 > 10
+ *   L5 少年归 = 漏斗到达底部次数（complete_checkin） > 10
+ * 阈值达成写进 `achieved`，由页面显示"达成"徽章。保留转化/drop-off 可视化。
+ */
+export const WANG_BAI_KOU_STEPS: readonly FunnelStep[] = [
+  'product.acquire',
+  'product.activate',
+  'product.retain',
+  'product.habit',
+  'product.value',
+]
+
+function distinctActiveDays(events: readonly AnalyticsEventRow[]): number {
+  const days = new Set<string>()
+  for (const event of events) {
+    days.add(event.ts.slice(0, 10)) // UTC 日期 YYYY-MM-DD
+  }
+  return days.size
+}
+
+export function buildWangBaiKouFunnel(events: readonly AnalyticsEventRow[]): FunnelReport {
+  const opens = events.filter((e) => e.step === 'product.acquire').length
+  const activations = events.filter((e) => e.step === 'product.activate').length
+  const activeDays = distinctActiveDays(events)
+  const completeCheckins = events.filter((e) => e.name === 'complete_checkin').length
+
+  const counts = new Map<FunnelStep, number>([
+    ['product.acquire', opens],
+    ['product.activate', activations],
+    ['product.retain', activeDays],
+    ['product.habit', activeDays],
+    ['product.value', completeCheckins],
+  ])
+
+  const report = computeFunnel('product', '王败寇', WANG_BAI_KOU_STEPS, counts)
+  const achievedMap: Record<string, boolean> = {
+    'product.acquire': opens > 0,
+    'product.activate': activations > 0,
+    'product.retain': activeDays > 3,
+    'product.habit': activeDays > 10,
+    'product.value': completeCheckins > 10,
+  }
+  for (const step of report.steps) {
+    step.achieved = achievedMap[step.step] ?? false
+  }
+  return report
+}
+
+/**
+ * 薄肌王漏斗（ADR-007 Task2）：基于真实打卡 `events`（domain=health）的四层，长期累积。
+ *   L1 喝大水和睡大觉 = water + sleep 出现的天数
+ *   L2 运动          = workout 出现的天数
+ *   L3 压抑指标      = suppression 出现的天数（越低越好）
+ *   L4 体感（最终层） = body_sense 出现的天数（feel_score 1–10）
+ * 各层"坚持天数"自然呈漏斗形，并标 `achieved`（该层是否记录过）。
+ */
+const HEALTH_KING_LAYERS = [
+  { key: 'water_sleep', label: '喝大水和睡大觉' },
+  { key: 'workout', label: '运动' },
+  { key: 'suppression', label: '压抑指标' },
+  { key: 'body_sense', label: '体感' },
+] as const
+
+function daysWithType(events: readonly EventRow[], types: readonly string[]): number {
+  const days = new Set<string>()
+  for (const event of events) {
+    if (types.includes(event.type)) days.add(event.ts.slice(0, 10))
+  }
+  return days.size
+}
+
+export function buildHealthKingFunnel(events: readonly EventRow[]): FunnelReport {
+  const counts = [
+    daysWithType(events, ['water', 'sleep']),
+    daysWithType(events, ['workout']),
+    daysWithType(events, ['suppression']),
+    daysWithType(events, ['body_sense']),
+  ]
+
+  let bottleneck: FunnelStep | null = null
+  let worst = -1
+  const steps = HEALTH_KING_LAYERS.map((layer, index) => {
+    const count = counts[index] as number
+    const prev = index === 0 ? count : (counts[index - 1] as number)
+    const conversionFromPrev = index === 0 ? (count > 0 ? 1 : 0) : prev > 0 ? count / prev : 0
+    const dropOffPct = index === 0 ? 0 : prev > 0 ? Math.max(0, (1 - count / prev) * 100) : 0
+    if (dropOffPct > worst) {
+      worst = dropOffPct
+      bottleneck = layer.key as FunnelStep
+    }
+    return {
+      step: layer.key as FunnelStep,
+      label: layer.label,
+      count,
+      conversionFromPrev,
+      dropOffPct,
+      achieved: count > 0,
+    }
+  })
+
+  const first = counts[0] ?? 0
+  const last = counts[counts.length - 1] ?? 0
+  return {
+    key: 'health',
+    title: '薄肌王',
+    steps,
+    bottleneck,
+    overallConversion: first > 0 && last > 0 ? last / first : 0,
+  }
+}
+
+/** 生成两层漏斗：王败寇（产品级改名）+ 三王 */
 export function buildFunnelReports(
   events: readonly AnalyticsEventRow[],
   segment: Segment = {},
+  healthEvents?: readonly EventRow[],
 ): FunnelReport[] {
   const filtered = filterBySegment(events, segment)
   const counts = countByStep(filtered)
+  const healthReport =
+    healthEvents && healthEvents.length > 0
+      ? buildHealthKingFunnel(healthEvents)
+      : computeFunnel('health', '薄肌王', KING_FUNNELS.health, counts)
   return [
-    computeFunnel('product', '产品级 AARRR', PRODUCT_FUNNEL, counts),
+    buildWangBaiKouFunnel(filtered),
     computeFunnel('dating', '黄毛王', KING_FUNNELS.dating, counts),
-    computeFunnel('health', '薄肌王', KING_FUNNELS.health, counts),
+    healthReport,
     computeFunnel('work', '力王', KING_FUNNELS.work, counts),
   ]
 }

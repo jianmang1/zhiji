@@ -930,3 +930,53 @@ FERNET 密钥恢复（控制台）已确认；health/dating 加密读写 E2E 已
 ### 3. 门禁与下一步
 - 两份 DeepSeek 派发指令均要求 `typecheck`+`test` 全绿后提 PR；且明确**勿改 `cloudbase.ts`/`authStore.ts`**（PO 登录重构中）。
 - 剩余活项：PO 登录跑通后做 health/dating 打卡 → 唤醒 Codex 做加密读写 E2E 服务端核验。
+
+---
+
+## 第 28 轮 · 2026-10-22T18:30+08:00（Tech Lead 自治 · 落地两份 DeepSeek 派发 + 提 PR）
+
+### 0. 触发
+- 承接第 27 轮：PO 反馈"漏斗意义不明/分群无用"，经 AskUserQuestion 四项确认后派发两份前端指令——`tech-lead-directive-ux-20261022.md`（自动保存草稿 + 感觉类拖条）与 `tech-lead-directive-funnel-redesign-20261022.md`（王败寇改名 + 薄肌王四层 + 砍分群运营）。
+- 本轮回合将其**一并实现并提 PR**（两份指令文件高度重叠：entry/payload/funnel/analyticsStore/app.config 多处同改，拆成两个 PR 必冲突，故合并为单分支单 PR）。
+
+### 1. 事实核对（git 远端，防虚报）
+- **权威 `origin/main = dc3b242`**（第 27 轮登录重构提交落点；本轮未合 main，仅前端 PR 待开）。
+- 前端实现分支 **`feat/frontend-ux-funnel-20261022` @ `f233355`**，已 `git push -u origin` 成功（首次 push 遇 `schannel server closed abruptly` 网络抖动，重跑成功）。
+- **`gh` CLI 不可用**（PortableGit 环境无 GitHub CLI）→ 无法 `gh pr create`；GitHub 已返回 Web 开 PR 链接：`https://github.com/jianmang1/zhiji/pull/new/feat/frontend-ux-funnel-20261022`，**待 PO/Tech Lead 在 Web 打开**（目标分支 `main`）。
+- 本地 `merge-base --is-ancestor origin/main f233355` 核验：`dc3b242` 是 `f233355` 祖先 → PR 为干净真合并候选（无分叉、无后端泄漏）。
+
+### 2. 本轮推进（A 类，自治，DeepSeek 指令落地）
+| 层 | 改动 | 门禁影响 |
+|----|------|----------|
+| 契约 §3（前端视） | 扩展 `health.suppression{score 0–10, note?}` + `body_sense.feel_score 1–10`；零数据库迁移，Codex 零改 | 契约文档随 PR 提交 |
+| `schemas/payload.ts` | `FieldSpec` 加 `control:'slider'` + `lowerIsBetter`；`body_sense` 增 `feel_score`（可选拖条）；新增 `suppression` 类型（必填拖条，越低越好）；`body_sense` refine 改"围度/体感/体感打分至少填一项" | 单测 `payload-schema` 同步扩 |
+| `stores/draftStore.ts`（新） | zustand 本地草稿，键 `draft:${domain}:${type}`，`save/load/clear/hasDraft/consumeRestored`；仅存本地、不碰 token、绝不自动提交 | 单测 `draftStore` 覆盖 |
+| `pages/entry/index.tsx`（大改） | 离开/切换页面兜底存草稿；提交成功清草稿；字段 `control==='slider'` 走 `Slider`；恢复横幅；"提交前不会写入云端"提示 | typecheck 合规 |
+| `services/funnel.ts` | 产品级改"王败寇"五层阶梯 + 阈值 achieved 徽章；新增 `buildHealthKingFunnel`（基于真实 health events 四层：喝大水和睡大觉→运动→压抑指标→体感）；`buildFunnelReports` 在传入 healthEvents 时替换 analytics 版 | 单测 `funnel-redesign` 覆盖 |
+| `services/funnelApi.ts` / `stores/analyticsStore.ts` | 产品级用 `WANG_BAI_KOU_STEPS`；`refreshFunnel` 在 `isCloudFunctionConfigured()` 时先 `listEventsRemote({domain:'health',limit:500})` 得真实事件报表替换远端 health 报表，未配置回落 analytics 版 | 单测 `analytics-store` 加 `listEventsRemote` mock |
+| `pages/funnel/index.tsx` + scss | 占位社区人数横幅"🌐 12.8 万人在记录（氛围展示）"；步骤行"达成"徽章 | — |
+| `app.config.ts` | 删除 `pages/segments/index` 与 tabBar 分群项 | — |
+| 删除（git rm） | `pages/segments/*`、`services/segments.ts`、`schemas/analytics.ts`、`tests/segments.test.ts`（死代码，无 src 引用） | 测试数减 |
+| `.gitignore` | 加 `project.private.config.json`（本地私有配置不入库） | — |
+
+### 3. 门禁核验（真实可复现，非采信 PR 描述）
+- `tsc --noEmit` = **0 错误**。
+- `vitest run` = **129 文件/用例全过，0 失败，exit 0**（较第 27 轮前基线 122 增 7：funnel-redesign + draftStore + payload-schema 扩展）。
+- `taro build:weapp` = **编译成功**（仅 vendors.js 体积告警，良性）。
+- 门禁 7（构建+测试）均真实通过；scope 纯前端、无 CloudBase 凭证需求 → 落入「无需凭证即可合并」自治范围（待开 PR 后 Tech Lead 走 --no-ff 合并）。
+
+### 4. 诚实度核验（防虚报 / 边界）
+- **未触碰 `cloudbase.ts` / `authStore.ts`**：PO 登录重构（`signInWithOpenId`）进行中，以 PO 版本为准，本 PR 严格守界。
+- **Codex 零改动**：`suppression` + `feel_score` 仅前端注册表 + 契约 §3 扩展，`events.type` 自由 text / `payload` 自由 jsonb 不变 → 后端零迁移、零重部署。
+- **王败寇"社区人数"为占位数字**（12.8 万），不实聚合，ADR-006 边界维持（跨用户 cohort 仍冻结）。
+- **力王/黄毛王漏斗暂不动**（ADR-007 §5 暂留）；`suppression.score` / `feel_score` 当前仅落库，未进评分引擎与 `generatePlan`（后续前端活项）。
+- 必填拖条（suppression.score）未交互时 `buildPayload` 回落 `min` 防 NaN；可选拖条（feel_score）留空省略，保住"只填围度"合法性。
+
+### 5. 卡在哪 / 未决（非阻塞）
+- **🔶 PR 未开**：`gh` 缺失，Web 链接 `https://github.com/jianmang1/zhiji/pull/new/feat/frontend-ux-funnel-20261022` 待 PO/Tech Lead 手动打开、目标 `main`。
+- 🟢 **DeepSeek 当前无待办**（两份派发已落地）。
+- 🟡 **health/dating 加密读写 E2E**：仍待 PO 登录跑通（signInWithOpenId）+ 完成 health(`body_sense`/`suppression`)+dating 打卡 → 唤醒 Codex 服务端核验（token 仅前端↔Codex，不经 Tech Lead）。
+- 🟢 后续前端活项（PO/DeepSeek 待定）：力王/黄毛王漏斗照搬薄肌王思路；suppression/feel_score 进评分引擎与 AI 意见联动。
+
+### 6. 本轮结论
+两份 DeepSeek 派发（UX 草稿自动保存+拖条、漏斗重构王败寇+薄肌王四层真实事件+砍分群）已在分支 `feat/frontend-ux-funnel-20261022`（`f233355`）**完整落地并通过全部门禁**（tsc 0 / vitest 129/129 / weapp 编译通过），**未触碰登录文件、Codex 零改、零迁移**。PR 待经 Web 链接手动打开到 `main`（环境无 `gh`）。唯一仍待驱动的活项：PO 登录跑通后做 health/dating 打卡 → 唤醒 Codex 做加密读写 E2E 服务端核验。待 PO 处理清单见 `docs/po-action-items.md`（第 28 轮）。

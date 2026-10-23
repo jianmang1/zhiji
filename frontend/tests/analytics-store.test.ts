@@ -8,11 +8,13 @@ const h = vi.hoisted(() => ({
   selectProfile: vi.fn(),
   upsertProfile: vi.fn(),
   fetchRemoteFunnels: vi.fn(),
+  listEventsRemote: vi.fn(),
   cloudEnabled: false,
 }))
 
 vi.mock('../src/services/events', () => ({
   loadDashboardData: h.loadDashboardData,
+  listEventsRemote: h.listEventsRemote,
   isCloudFunctionConfigured: () => h.cloudEnabled,
 }))
 vi.mock('../src/services/funnelApi', () => ({

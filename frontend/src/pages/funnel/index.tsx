@@ -61,8 +61,14 @@ export default function FunnelPage() {
         {funnelSource === 'cloud'
           ? '数据来源：getFunnel 云函数（仅聚合 RLS 内当前用户可见事件）。'
           : '数据来源：前端本地计算（云函数端点未配置或不可用时的降级口径）。'}
-        瓶颈步 = 单步流失率最大的那步，红框标出。
+        瓶颈步 = 单步流失率最大的那步，红框标出；带「达成」徽章的层表示你已跨过该阈值。
       </Text>
+
+      <View className="funnel__community">
+        <Text className="funnel__communityText">
+          🌐 12.8 万人在记录（氛围展示 · 非真实统计，ADR-006 隐私冻结维持）
+        </Text>
+      </View>
 
       <View className="funnel__segments">
         <Text className="funnel__segLabel">渠道</Text>
@@ -147,6 +153,7 @@ export default function FunnelPage() {
                     <Text className="funnel__stepIndex">{index + 1}</Text>
                     <Text className="funnel__stepLabel">{step.label}</Text>
                     {isBottleneck && <Text className="funnel__badge">瓶颈</Text>}
+                    {step.achieved && !isBottleneck && <Text className="funnel__done">达成</Text>}
                   </View>
                   <View className="funnel__stepNums">
                     <Text className="funnel__count">{step.count}</Text>

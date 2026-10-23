@@ -3,7 +3,7 @@ import { DOMAINS, KING_LABELS } from '../src/types/contract'
 import { EVENT_TYPES, getEventTypeSpec } from '../src/schemas/payload'
 
 const CONTRACT_TYPES: Record<string, string[]> = {
-  health: ['water', 'sleep', 'workout', 'body_sense'],
+  health: ['water', 'sleep', 'workout', 'body_sense', 'suppression'],
   work: ['work_log'],
   dating: ['approach', 'date', 'chat', 'stage'],
 }
@@ -29,7 +29,8 @@ describe('payload 注册表与契约 v1.4 §3 一致', () => {
       'health.water': ['ml'],
       'health.sleep': ['duration_h', 'quality'],
       'health.workout': ['type', 'duration_min', 'calorie'],
-      'health.body_sense': ['waist_cm', 'feel', 'note'],
+      'health.body_sense': ['waist_cm', 'feel', 'feel_score', 'note'],
+      'health.suppression': ['score', 'note'],
       'work.work_log': ['hours', 'wage', 'salary', 'commute_min'],
       'dating.approach': ['count', 'channel', 'got_response'],
       'dating.date': ['count', 'duration_min', 'mood', 'spend_yuan'],
@@ -62,6 +63,25 @@ describe('payload 校验', () => {
     expect(spec.schema.safeParse({ waist_cm: 0 }).success).toBe(false)
     expect(spec.schema.safeParse({ waist_cm: 999 }).success).toBe(false)
     expect(spec.schema.safeParse({ waist_cm: 80, extra: 1 }).success).toBe(false)
+  })
+
+  it('body_sense.feel_score 接受 1–10 整数，拒绝越界（ADR-007）', () => {
+    const spec = getEventTypeSpec('health', 'body_sense')
+    if (!spec) throw new Error('body_sense 缺失')
+    expect(spec.schema.safeParse({ feel_score: 7 }).success).toBe(true)
+    expect(spec.schema.safeParse({ feel_score: 0 }).success).toBe(false)
+    expect(spec.schema.safeParse({ feel_score: 11 }).success).toBe(false)
+    expect(spec.schema.safeParse({ feel_score: 7.5 }).success).toBe(false)
+  })
+
+  it('suppression.score 接受 0–10 整数，且可独立成条（ADR-007）', () => {
+    const spec = getEventTypeSpec('health', 'suppression')
+    if (!spec) throw new Error('suppression 缺失')
+    expect(spec.schema.safeParse({ score: 3 }).success).toBe(true)
+    expect(spec.schema.safeParse({ score: 11 }).success).toBe(false)
+    expect(spec.schema.safeParse({ score: -1 }).success).toBe(false)
+    expect(spec.schema.safeParse({}).success).toBe(false) // score 为必填（压抑值是核心数据）
+    expect(spec.schema.safeParse({ score: 3, note: '被安排加班' }).success).toBe(true)
   })
   it('接受合法的 health.water', () => {
     const spec = getEventTypeSpec('health', 'water')

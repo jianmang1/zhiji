@@ -148,3 +148,36 @@
   line-height: 1.6;
   color: var(--muted);
 }
+
+.entry__restored {
+  border: 3px dashed var(--ink);
+  background: #fff7cc;
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 8px 12px;
+}
+
+.entry__restoredText {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.entry__draft {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.entry__slider {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  padding: 10px 12px;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.entry__sliderVal {
+  font-size: 15px;
+  font-weight: 900;
+}

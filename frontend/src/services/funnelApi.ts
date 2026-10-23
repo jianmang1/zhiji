@@ -9,7 +9,7 @@ import { callHttpFunction } from './events'
 import {
   adaptRemoteFunnel,
   KING_FUNNELS,
-  PRODUCT_FUNNEL,
+  WANG_BAI_KOU_STEPS,
   type FunnelReport,
   type RemoteFunnelPayload,
   type Segment,
@@ -57,7 +57,7 @@ export async function fetchRemoteFunnels(
   ])
 
   return [
-    adaptRemoteFunnel('product', '产品级 AARRR', product, PRODUCT_FUNNEL),
+    adaptRemoteFunnel('product', '王败寇', product, WANG_BAI_KOU_STEPS),
     adaptRemoteFunnel('dating', '黄毛王', dating, KING_FUNNELS.dating),
     adaptRemoteFunnel('health', '薄肌王', health, KING_FUNNELS.health),
     adaptRemoteFunnel('work', '力王', work, KING_FUNNELS.work),

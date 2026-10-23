@@ -23,6 +23,13 @@ export interface FieldSpec {
   optional?: boolean
   /** 枚举项中文展示 */
   optionLabels?: Readonly<Record<string, string>>
+  /**
+   * 录入控件类型（默认按 kind 渲染 Input/Picker/枚举 chips）。
+   * 'slider' = 拖条（ADR-007：感觉/体感类输入改拖条，PO 体验反馈）。
+   */
+  control?: 'slider'
+  /** 拖条方向：true 表示该值越低越好（ADR-007 压抑指标 suppression） */
+  lowerIsBetter?: boolean
 }
 
 export interface EventTypeSpec {
@@ -86,7 +93,7 @@ function defineType(
 
 
 /* ───────────────────────── health（薄肌王）───────────────────────── */
-/** 契约 v1.5 §3：water{ml} / sleep{duration_h,quality} / workout{type,duration_min,calorie} / body_sense{waist_cm?,feel?,note?} */
+/** 契约 v1.5 §3：water{ml} / sleep{duration_h,quality} / workout{type,duration_min,calorie} / body_sense{waist_cm?,feel?,feel_score?,note?} / suppression{score,note?}(ADR-007) */
 const HEALTH: readonly EventTypeSpec[] = [
   defineType('water', '喝大水', [{ key: 'ml', label: '饮水量', kind: 'number', unit: 'ml', min: 0, integer: true }]),
   defineType('sleep', '睡大觉', [
@@ -107,18 +114,47 @@ const HEALTH: readonly EventTypeSpec[] = [
         optionLabels: { great: '很好', ok: '一般', tired: '疲惫' },
         optional: true,
       },
+      // ADR-007：自己体感打分 1–10（薄肌王漏斗最终层）；拖条录入
+      {
+        key: 'feel_score',
+        label: '体感打分',
+        kind: 'number',
+        unit: '分',
+        min: 1,
+        max: 10,
+        integer: true,
+        optional: true,
+        control: 'slider',
+      },
       { key: 'note', label: '备注（可选）', kind: 'text', optional: true },
     ],
-    // 契约三个字段都可空，但空记录没有意义 → 客户端要求"体感与围度至少填一项"
+    // 契约字段都可空，但空记录没有意义 → 客户端要求"围度 / 体感枚举 / 体感打分 至少填一项"
     (schema) =>
-      schema.refine((value) => value.waist_cm !== undefined || value.feel !== undefined, {
-        message: '体感与围度至少填一项',
-      }) as z.ZodType<Record<string, unknown>>,
+      schema.refine(
+        (value) => value.waist_cm !== undefined || value.feel !== undefined || value.feel_score !== undefined,
+        { message: '围度 / 体感 / 体感打分至少填一项' },
+      ) as z.ZodType<Record<string, unknown>>,
   ),
   defineType('workout', '练薄肌', [
     { key: 'type', label: '训练类型', kind: 'text' },
     { key: 'duration_min', label: '训练时长', kind: 'number', unit: '分钟', min: 0, integer: true },
     { key: 'calorie', label: '消耗', kind: 'number', unit: '千卡', min: 0 },
+  ]),
+  // ADR-007：压抑指标（新增健康打卡类型，零迁移）。越低越好：
+  // 做了不想做的事 / 没做想做的事 → 下降值（打高分）；随心所欲做了 → 上升值（打低分）。
+  defineType('suppression', '压抑指标', [
+    {
+      key: 'score',
+      label: '压抑值',
+      kind: 'number',
+      unit: '分',
+      min: 0,
+      max: 10,
+      integer: true,
+      control: 'slider',
+      lowerIsBetter: true,
+    },
+    { key: 'note', label: '备注（可选）', kind: 'text', optional: true },
   ]),
 ]
 

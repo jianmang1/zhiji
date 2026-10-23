@@ -9,8 +9,8 @@
  *   work            → cloud.rdb()
  * 打卡成功后顺带发漏斗埋点（模块 6，零额外摩擦）。
  */
-import { Button, Input, Text, View } from '@tarojs/components'
-import Taro, { useDidShow } from '@tarojs/taro'
+import { Button, Input, Slider, Text, View } from '@tarojs/components'
+import Taro, { useDidHide, useDidShow } from '@tarojs/taro'
 import { useMemo, useRef, useState } from 'react'
 import { EVENT_TYPES, getEventTypeSpec, type FieldSpec } from '../../schemas/payload'
 import { DEFAULT_SOURCE } from '../../schemas/event'
@@ -26,13 +26,14 @@ import { elapsedMs } from '../../services/perf'
 import { DOMAINS, KING_LABELS, isSensitiveDomain, type Domain } from '../../types/contract'
 import { useEventStore } from '../../stores/eventStore'
 import { useAnalyticsStore } from '../../stores/analyticsStore'
+import { useDraftStore } from '../../stores/draftStore'
 import { KING_COLORS } from '../../styles/kings'
 import { fromLocalInput, toLocalInputValue } from '../../utils/datetime'
 import { ensureAuthenticated } from '../../utils/guard'
 
 import './index.scss'
 
-type FieldValue = string | boolean
+type FieldValue = string | boolean | number
 
 function firstTypeOf(domain: Domain): string {
   const spec = EVENT_TYPES[domain][0]
@@ -47,8 +48,17 @@ function buildPayload(fields: readonly FieldSpec[], values: Record<string, Field
       continue
     }
     if (field.kind === 'number') {
-      // 空值保持 NaN，让 Zod 报"请输入数字"而不是静默变 0
-      payload[field.key] = typeof raw === 'string' && raw.trim() !== '' ? Number(raw) : Number.NaN
+      // 必填拖条（如 suppression.score）未拖动时回落到 min，避免提交 NaN；
+      // 可选拖条（如 body_sense.feel_score）留空则省略，保留"只填围度"的合法性
+      if (field.control === 'slider' && raw === undefined && !field.optional) {
+        payload[field.key] = field.min ?? 0
+      } else if (typeof raw === 'number') {
+        payload[field.key] = raw
+      } else if (typeof raw === 'string' && raw.trim() !== '') {
+        payload[field.key] = Number(raw)
+      } else {
+        payload[field.key] = Number.NaN
+      }
     } else if (field.kind === 'boolean') {
       payload[field.key] = raw === true
     } else {
@@ -71,13 +81,38 @@ export default function EntryPage() {
   const [spendAmount, setSpendAmount] = useState('')
   const [spendError, setSpendError] = useState<string | null>(null)
   const [spendSaving, setSpendSaving] = useState(false)
+  /** UX 优化 Task1：恢复草稿后短暂提示 */
+  const [restored, setRestored] = useState(false)
+  const draftSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const submit = useEventStore((s) => s.submit)
   const refresh = useEventStore((s) => s.refresh)
   const track = useAnalyticsStore((s) => s.track)
   const trackPlans = useAnalyticsStore((s) => s.trackPlans)
+  const draftSave = useDraftStore((s) => s.save)
+  const draftLoad = useDraftStore((s) => s.load)
+  const draftClear = useDraftStore((s) => s.clear)
+
+  /** 把当前表单状态存进草稿（不触发提交） */
+  const persistDraft = (nextValues: Record<string, FieldValue>, nextTs: string) => {
+    draftSave(domain, type, nextValues, nextTs)
+  }
+
+  const restoreDraft = (targetDomain: Domain, targetType: string) => {
+    const entry = draftLoad(targetDomain, targetType)
+    if (entry) {
+      setValues(entry.values)
+      setTsText(entry.tsText)
+      setRestored(true)
+      return true
+    }
+    setRestored(false)
+    return false
+  }
 
   useDidShow(() => {
     shownAtRef.current = Date.now()
+    // 进入即尝试恢复上次未提交的草稿
+    restoreDraft(domain, type)
     void (async () => {
       if (await ensureAuthenticated()) {
         // 供埋点判定"首次打卡"与"综合打卡"，同时给看板一份最新数据
@@ -86,27 +121,46 @@ export default function EntryPage() {
     })()
   })
 
+  /** 离开页面兜底存一次草稿（防止"点进其他地方"丢数据） */
+  useDidHide(() => {
+    if (Object.keys(values).length > 0) {
+      persistDraft(values, tsText)
+    }
+  })
+
   const spec = useMemo(() => getEventTypeSpec(domain, type), [domain, type])
   const sensitiveBlocked = isSensitiveDomain(domain) && !isCloudFunctionConfigured()
 
   const selectDomain = (next: Domain) => {
+    // 切换王前先存当前草稿，再切到目标王并恢复其草稿
+    if (Object.keys(values).length > 0) persistDraft(values, tsText)
     setDomain(next)
     setType(firstTypeOf(next))
     setValues({})
     setErrors({})
     setVia(null)
+    setRestored(false)
+    restoreDraft(next, firstTypeOf(next))
     void track('view_king', 'product.activate', { domain: next })
   }
 
   const selectType = (next: string) => {
+    if (Object.keys(values).length > 0) persistDraft(values, tsText)
     setType(next)
     setValues({})
     setErrors({})
     setVia(null)
+    setRestored(false)
+    restoreDraft(domain, next)
   }
 
   const setField = (key: string, value: FieldValue) => {
-    setValues((prev) => ({ ...prev, [key]: value }))
+    const next = { ...values, [key]: value }
+    setValues(next)
+    if (restored) setRestored(false)
+    // 字段变动即存草稿（debounce，避免拖条拖动高频写盘）
+    if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current)
+    draftSaveTimer.current = setTimeout(() => persistDraft(next, tsText), 300)
   }
 
   const fieldError = (key: string): string | undefined => errors[`payload.${key}`] ?? errors[key]
@@ -126,6 +180,10 @@ export default function EntryPage() {
       }, { entryDurationMs: elapsedMs(shownAtRef.current) })
       if (result.ok) {
         setValues({})
+        // 提交成功后清空该草稿（草稿仅用于"未提交"的防丢场景）
+        draftClear(domain, type)
+        setRestored(false)
+        if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current)
         setVia(result.via)
         await Taro.showToast({ title: '记下了', icon: 'success' })
       } else {
@@ -200,6 +258,11 @@ export default function EntryPage() {
 
       {spec && (
         <View className="entry__form">
+          {restored && (
+            <View className="entry__restored" onClick={() => setRestored(false)}>
+              <Text className="entry__restoredText">已恢复上次未提交的草稿（点此忽略）</Text>
+            </View>
+          )}
           {spec.fields.map((field) => (
             <View className="entry__field" key={field.key}>
               <Text className="entry__fieldLabel">
@@ -238,7 +301,32 @@ export default function EntryPage() {
                 </View>
               )}
 
-              {(field.kind === 'number' || field.kind === 'text') && (
+              {field.control === 'slider' ? (
+                <View className="entry__slider">
+                  <Slider
+                    min={field.min ?? 0}
+                    max={field.max ?? 10}
+                    step={field.integer ? 1 : 1}
+                    value={
+                      typeof values[field.key] === 'number'
+                        ? (values[field.key] as number)
+                        : (field.min ?? 0)
+                    }
+                    activeColor={KING_COLORS[domain]}
+                    backgroundColor="#E6E6E6"
+                    blockColor={KING_COLORS[domain]}
+                    onChanging={(e) => setField(field.key, e.detail.value)}
+                    onChange={(e) => setField(field.key, e.detail.value)}
+                  />
+                  <Text className="entry__sliderVal">
+                    {typeof values[field.key] === 'number'
+                      ? (values[field.key] as number)
+                      : (field.min ?? 0)}
+                    {field.unit ? ` ${field.unit}` : ''}
+                    {field.lowerIsBetter ? '（越低越好）' : ''}
+                  </Text>
+                </View>
+              ) : (field.kind === 'number' || field.kind === 'text') && (
                 <Input
                   className="entry__input"
                   type={field.kind === 'number' ? 'digit' : 'text'}
@@ -263,6 +351,9 @@ export default function EntryPage() {
             <Text className="entry__ok">
               已入账 · {via === 'rdb' ? 'cloud.rdb() 直写' : 'recordEvent 云函数加密'}
             </Text>
+          )}
+          {Object.keys(values).length > 0 && !restored && (
+            <Text className="entry__draft">草稿已自动保存（提交前不会写入云端）</Text>
           )}
 
           <Button
