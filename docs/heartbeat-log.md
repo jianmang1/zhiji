@@ -973,7 +973,7 @@ FERNET 密钥恢复（控制台）已确认；health/dating 加密读写 E2E 已
 - 必填拖条（suppression.score）未交互时 `buildPayload` 回落 `min` 防 NaN；可选拖条（feel_score）留空省略，保住"只填围度"合法性。
 
 ### 5. 卡在哪 / 未决（非阻塞）
-- **🔶 PR 已开并合并**：PO 经 Web 链接开 PR 到 `main`；Tech Lead 复核门禁（tsc 0 / vitest 129/129，复验 2026-10-23 仍 129/129 全绿）后用 `--no-ff` 合并，`main = aa1911d`。**（PR 号待补记入 KB）**
+- **🔶 PR 已开并合并**：PO 经 Web 链接开 PR **#11** 到 `main`；Tech Lead 复核门禁（tsc 0 / vitest 129/129，复验 2026-10-23 仍 129/129 全绿）后用 `--no-ff` 合并，`main = aa1911d`。
 - 🟢 **DeepSeek 当前无待办**（两份派发已落地并合 main）。
 - 🟡 **health/dating 加密读写 E2E**：仍待 PO 登录跑通（signInWithOpenId）+ 完成 health(`body_sense`/`suppression`)+dating 打卡 → 唤醒 Codex 服务端核验（token 仅前端↔Codex，不经 Tech Lead）。
 - 🟢 后续前端活项（PO/DeepSeek 待定）：力王/黄毛王漏斗照搬薄肌王思路；suppression/feel_score 进评分引擎与 AI 意见联动。
@@ -985,5 +985,5 @@ FERNET 密钥恢复（控制台）已确认；health/dating 加密读写 E2E 已
 - **门禁复验（合并前，feature 分支）**：`npm run typecheck` → 0 错误；`npm test` → **129/129 通过（18 文件）**；基线 `merge-base --is-ancestor origin/main feat` 通过（origin/main=dc3b242 未因其它 PR 移动）。
 - **合并动作**：`git checkout main && git merge --no-ff origin/feat/frontend-ux-funnel-20261022` → 合并提交 **`aa1911d`**（22 files, +708/−368）；`git push origin main` 成功 → `origin/main = aa1911d`。
 - **性质**：scope 纯前端、无 CloudBase 凭证需求 → 落入「无需凭证即可合并」自治范围（第 27 轮裁定）。PO 登录重构文件（cloudbase.ts/authStore.ts）未被触碰。
-- **PR 自动闭环**：合并提交进 main 后，GitHub 已将该 PR 标为 merged（PR 号待补记入 KB）。
+- **PR 自动闭环**：合并提交进 main 后，GitHub 已将该 PR（**#11**）标为 merged。
 - **收尾建议（PO 可选）**：此前遗留的 open PR#6/#7 为 PR#8 祖先（内容已含于 main），可到 Pull requests 页关闭以免混淆。

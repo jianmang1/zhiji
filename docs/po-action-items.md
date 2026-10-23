@@ -5,7 +5,7 @@
 > 本轮回合：2026-10-22T18:30+08:00（第 28 轮 · 漏斗重构 + UX 派发已落地）。
 
 ## 📌 本轮核验结论（Tech Lead 自治核验）
-- **origin/main = aa1911d**（本轮 `--no-ff` 合并提交）；本次前端实现位于分支 **`feat/frontend-ux-funnel-20261022`**（commit `f233355` + KB `28bea26`），**PR 已由 PO 开并经 Tech Lead 复核合并入 main**（PR 号待补记入 KB）。
+- **origin/main = aa1911d**（本轮 `--no-ff` 合并提交）；本次前端实现位于分支 **`feat/frontend-ux-funnel-20261022`**（commit `f233355` + KB `28bea26`），**PR #11 已由 PO 开并经 Tech Lead 复核合并入 main**。
 - **两份 DeepSeek 派发指令（🟢）已落地实现**：因两者文件高度重叠（entry/payload/funnel/analyticsStore/app.config），合并为单次 PR 以免冲突。
   - 门禁全绿：`tsc --noEmit` 0 错误；`vitest` **129/129**；`taro build:weapp` 编译通过。
   - **未触碰 `cloudbase.ts` / `authStore.ts`**（PO 登录重构中，以 PO 版本为准）。
