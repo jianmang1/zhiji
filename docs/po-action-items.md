@@ -19,7 +19,7 @@
 - **可延后**：王败寇"社区人数"为占位数字（不实聚合，ADR-006 冻结维持）；若未来要真聚合需另升隐私裁定。
 
 ## 🟡 需唤醒 Codex 会话（CloudBase 凭证类）
-- **health/dating 加密读写 E2E（directive 已派发 2026-10-21，2026-10-23 激活）**：`FERNET_ENCRYPTION_KEY` 已恢复；**前置已于 2026-10-23 满足——PO 报告登录跑通 + 小程序已上传**。已升级指令为"激活"，请 Codex 按**路线 A**执行：PO 在前端用已登录账号写 health(`body_sense`/`suppression`)+dating 并回读明文 → Codex 服务端核验 PG 密文落库 + 同密钥解密 + RLS 按 uid 隔离。token 仅前端↔Codex，不经 Tech Lead（见 directive §0/§5）。
+- **health/dating 加密读写 E2E（directive 已派发 2026-10-21，2026-10-23 激活）**：`FERNET_ENCRYPTION_KEY` 已恢复；**前置已满足（PO 报告登录跑通 + 上传）**。2026-10-23T11:27 **PO 报告已打卡（health/dating 写入）且 App 内回读成功（客户端解密确认）** → 数据已真实落库，**Codex 服务端核验进行中（路线 A：PG 密文落库 + 同密钥解密 + RLS 隔离，待回写 checkpoint）**。token 仅前端↔Codex，不经 Tech Lead（见 directive §0/§5/§6）。
 - A1/A3/A4/A5/A6 已随 PR#9 合 main，**无需再唤醒**。
 
 ## 🟢 唤醒 DeepSeek 会话（前端待办）

@@ -1011,3 +1011,8 @@ FERNET 密钥恢复（控制台）已确认；health/dating 加密读写 E2E 已
 
 ### 4. 本轮结论
 登录跑通 + 上传完成是 Phase3 关键里程碑；Codex 加密 E2E 已正式唤醒（路线 A）。**剩余**：PO 写一条 health + 一条 dating 打卡 → Codex 服务端核验密文/解密/RLS → 回写 checkpoint → Tech Lead 复核合并。冻结文件 `cloudbase.ts`/`authStore.ts` 未被破坏。
+
+### 5. PO 打卡 + 回读成功（2026-10-23T11:27）
+- PO 报告：**已用已登录账号打卡（health/dating 写入），且 App 内 `listEvents` 回读成功——看到明文，客户端 FERNET 解密正常**。路线 A 客户端侧证据齐备。
+- 数据已真实落库（带真实 uid）。**Codex 服务端核验进入可执行态**：PG `events` 查该用户 health/dating 行 `payload` 为 Fernet 密文 → 同密钥解密样本 → RLS 按 uid 隔离；核验后补 `integration-checkpoint-20261021.md` 敏感域段落并 KB 回写。
+- 指令 §6 已记录该进展；po-action-items 🟡 改为"Codex 服务端核验进行中"。

@@ -46,3 +46,8 @@ E2E 复测属执行层闭环；密钥恢复与隐私裁定（ADR-006 本期不�
   3. 补录 `integration-checkpoint-20261021.md` 敏感域段落：状态码、脱敏响应、耗时、密文样本（脱敏）、解密回读结果、RLS 隔离结果。
 - **门禁**：远端 + 可复现 + 不伪造；token 不进任何 KB/PR。
 - **回写**：完成后在 KB 写结果 → Tech Lead 复核合并。
+
+### 6. PO 进展（2026-10-23T11:27 · Tech Lead 记录）
+- **PO 报告已用已登录账号打卡（health/dating 写入），且 App 内 `listEvents` 回读成功——看到明文，客户端 FERNET 解密正常。** 这是路线 A 的客户端侧证据（用户自证）。
+- 数据已真实落库（带真实 uid）。**Codex 立即执行服务端核验**，无需再等：PG `events` 查该用户 health/dating 行 `payload` 为 Fernet 密文 → 用函数环境同款 `FERNET_ENCRYPTION_KEY` 解密样本验证 → RLS 隔离（无用户/其他用户上下文读不到该用户行）。
+- 核验后补录 `integration-checkpoint-20261021.md` 敏感域段落（状态码/脱敏响应/耗时/密文样本/解密回读/RLS），并在 KB 回写结果。
