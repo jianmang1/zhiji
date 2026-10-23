@@ -5,7 +5,7 @@
 > 本轮回合：2026-10-22T18:30+08:00（第 28 轮 · 漏斗重构 + UX 派发已落地）。
 
 ## 📌 本轮核验结论（Tech Lead 自治核验）
-- **origin/main = dc3b242**；本次前端实现位于分支 **`feat/frontend-ux-funnel-20261022`**（commit `f233355`），已 push 远端，待开 PR 到 `main`。
+- **origin/main = aa1911d**（本轮 `--no-ff` 合并提交）；本次前端实现位于分支 **`feat/frontend-ux-funnel-20261022`**（commit `f233355` + KB `28bea26`），**PR 已由 PO 开并经 Tech Lead 复核合并入 main**（PR 号待补记入 KB）。
 - **两份 DeepSeek 派发指令（🟢）已落地实现**：因两者文件高度重叠（entry/payload/funnel/analyticsStore/app.config），合并为单次 PR 以免冲突。
   - 门禁全绿：`tsc --noEmit` 0 错误；`vitest` **129/129**；`taro build:weapp` 编译通过。
   - **未触碰 `cloudbase.ts` / `authStore.ts`**（PO 登录重构中，以 PO 版本为准）。
@@ -23,8 +23,8 @@
 - A1/A3/A4/A5/A6 已随 PR#9 合 main，**无需再唤醒**。
 
 ## 🟢 唤醒 DeepSeek 会话（前端待办）
-- **✅ 已完成（合并 PR）**：① 体验优化（自动保存草稿 + 感觉/体感拖条）② 漏斗重构（王败寇改名 + 薄肌王四层 + 砍分群运营）。两指令在分支 `feat/frontend-ux-funnel-20261022` 一并实现，待开 PR。
+- **✅ 已合并 main @ aa1911d**：① 体验优化（自动保存草稿 + 感觉/体感拖条）② 漏斗重构（王败寇改名 + 薄肌王四层 + 砍分群运营）。两指令在分支 `feat/frontend-ux-funnel-20261022` 一并实现并已合 main。
 - **后续前端活项（PO/DeepSeek 待定）**：力王/黄毛王漏斗照搬薄肌王思路重构（ADR-007 §5 暂留）；suppression/feel_score 录入后的评分与 AI 意见联动（当前仅落库，未进评分引擎）。
 
 ## 本轮结论
-ADR-007 + 两份前端派发指令已全部落地实现并通过门禁（`f233355`，分支 `feat/frontend-ux-funnel-20261022`，待开 PR 到 `main`）。**唯一仍待你驱动的活项**：登录跑通后做 health/dating 打卡 → 唤醒 Codex 做加密读写 E2E 服务端核验。
+ADR-007 + 两份前端派发指令已全部落地实现并通过门禁、合并入 `main`（`aa1911d`，分支 `feat/frontend-ux-funnel-20261022`）。**唯一仍待你驱动的活项**：登录跑通后做 health/dating 打卡 → 唤醒 Codex 做加密读写 E2E 服务端核验。
