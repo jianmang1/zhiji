@@ -1083,3 +1083,19 @@ coverage                -> 行 87.26% / 分支 75.59% / 函数 84.51% / 语句 8
 - **e2e 未实际执行**：Playwright 浏览器下载在本环境仍被阻断；spec 已按新行为重写，待有浏览器的环境跑。
 - **根因 ② 的真正修复在 PO 平台动作**（request 域名白名单 + 微搭授权），代码只兜底"失败必有反馈"，不能替代。
 - **Codex WIP 让路说明**：合并 main 前，工作树里有 Codex 未提交的 `docs/heartbeat-log.md`（"第30轮 Codex 承接加密 E2E"）与 `docs/po-action-items.md` 改动。为不覆盖其内容，已 `git stash push` 暂存为 **`stash@{0}`**（message: `codex-wip: heartbeat 第30轮 E2E + po-action-items`）。**请 Codex 在自己的提交里 `git stash pop` 取回**，不会被丢弃。
+---
+
+## 第 32 轮 · 2026-10-27T15:30+08:00（Tech Lead · PR #12 合并复核收口）
+
+### 门禁复验（合并前，feature 分支实测）
+- `tsc --noEmit` → 0；`vitest run` → **137/137（19 文件）**，与 DeepSeek 回写一致。
+
+### 合并动作
+- `git merge --no-ff origin/feat/frontend-audit-fix-20261026` → 合并提交 **`d823255`**（18 files, +467/−46）；`git push origin main` → **origin/main = d823255**。GitHub 侧 PR #12 将自动标 merged。
+- 合并内容：游客可浏览（首页=entry + `restoreSession`/`requireLogin`/`leaveLogin`）+ 登录失败 Toast + 「先逛逛」+ DeepSeek 5 处修订 + guard 测试 8 例 + 域名白名单精确域名纠正（`5f11c4c`，通配符 `*` 不被微信支持）。
+- Codex WIP（heartbeat 第30轮 E2E 执行记录）已 `git stash push` 暂存（message: `codex-wip: heartbeat 第30轮 E2E 执行记录…`），合并后 pop 回工作树，**待 Codex 续写并自行提交**。
+
+### 当前门槛：仅剩 PO 平台动作
+1. request 合法域名两条精确值（勿用 `*`）：`https://zhiji-d3gd1k9j43e7c20ac-1510872056.ap-shanghai.app.tcloudbase.com` + `https://tcb-api.tencentcloudapi.com`。
+2. 处理「腾讯云微搭低代码」第三方授权，解锁提审入口。
+3. 重传版本（含 d823255 代码）→ 提审。
