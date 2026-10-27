@@ -1114,3 +1114,9 @@ coverage                -> 行 87.26% / 分支 75.59% / 函数 84.51% / 语句 8
 
 ### 下一步
 - 请 PO 在已登录小程序提交 `health/body_sense`（不需要把任何敏感值发到聊天），然后告知大致时间；Codex 再做只读密文核验。此前 CloudBase 标签保持登录供后续检查。
+
+### 第 33 轮追加核验 · 2026-10-27T15:38+08:00
+- PO 确认登录完成后，Codex 复用同一 CloudBase 会话重新打开 PostgreSQL SQL Editor；加密 envelope 聚合及脱敏样本结果一致。复查 `health/body_sense` 近 14 天计数仍为 0（7 ms）。
+- RLS 复测：Anonymous 查询可见行数 0（8 ms）；以虚构探针外部 ID 建立的 Authenticated 模拟上下文可见行数 0（13 ms）。探针不是 PO 的真实身份，不作为 E2E 用户归属证据。没有查询或记录真实 uid。
+- 管理员数据编辑器曾在界面显示行级 uid 与完整 token；未复制或写入 KB，checkpoint 仅保存脱敏证据。数据库操作只读。
+- **仍部分通过**：缺少 `body_sense` 行；不能直接读取遮蔽的函数密钥做离线解密，PO 早前报告的 App 回读仍为客户端侧证据；HTTP 状态与 RTT 未留存。没有新 token、key 或明文进入 KB。

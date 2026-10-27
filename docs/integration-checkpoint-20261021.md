@@ -129,3 +129,47 @@ CloudBase Python 3.11 四个 HTTP 云函数已修复 Layer 导入路径并部署
 
 - 本轮重部署后 `TCB_ENV_ID` 已显式设为当前 CloudBase 环境，避免未解析变量导致函数 500。
 - **FERNET 密钥恢复（2026-10-21，CloudBase 控制台核对）**：环境负责人已恢复原密钥；控制台环境变量表确认 `recordEvent`、`listEvents`、`generatePlan` 均配置了 `FERNET_ENCRYPTION_KEY`。为避免泄露，检查点不记录密钥值。该核对只证明函数配置项已存在；恢复后的 health/dating 加密写入、读取与解密 E2E 尚未复测，需取得应用侧测试用户登录态（CloudBase access token）后补录状态码、脱敏响应和耗时。腾讯云控制台登录态本身不能替代该用户 token。此前的工作域 smoke 不依赖 Fernet 密钥。
+
+## 敏感域 E2E 路线 A · 服务端补核（2026-10-27）
+
+本节记录 2026-10-27 在 CloudBase 控制台恢复登录后进行的只读核验。PO 报告小程序样本已写入且 App 内回读明文；未索取应用 token。
+
+### 函数配置
+
+- CloudBase 环境 `zhiji-d3gd1k9j43e7c20ac` 中 `recordEvent`、`listEvents`、`generatePlan` 均为 HTTP / Python 3.11、状态“正常”；三个函数配置页均列出 `FERNET_ENCRYPTION_KEY`，其值由控制台遮蔽。本次未展示、复制或比较密钥值。
+- 配置页最近更新时间仍为 2026-10-21；线上 `recordEvent` 代码编辑视图未能加载代码内容，故本次不声称从控制台源码逐行核验实现。
+
+### 数据库加密证据（PostgreSQL SQL 编辑器，只读）
+
+查询返回事件域/类型、时间、envelope 检查结果及密文长度或掩码片段，不返回 payload 明文。耗时为控制台 SQL 执行耗时，不是 HTTP 请求耗时。
+
+| 检查 | SQL 执行 | 脱敏结果 |
+|---|---:|---|
+| 近 14 天 health/dating 类型汇总及 `_encrypted_v1` envelope | 19 ms | 5 个类型组，所有组 `all_have_fernet_envelope=true`；`dating/approach` 2 行（最新 2026-10-23 11:22+08），`health/suppression` 2 行（最新 11:22+08）；密文长度分别为 164 / 100 字符。 |
+| Fernet token 前缀与目标类型计数 | 13 ms | `all_are_fernet_tokens=true`（token 均匹配 `gAAAA%`）；`dating/approach=2`、`health/suppression=2`、`health/body_sense=0`。 |
+| 登录恢复后复查 `health/body_sense` 近 14 天记录数 | 7 ms | `body_sense_rows_14d=0`。 |
+| 脱敏密文样本 | 18 ms | `dating/approach`：`gAAAAABq…jQLA==`（164 字符）；`health/suppression`：`gAAAAABq…ZRGw==`（100 字符），保留首 8 / 尾 6 字符。 |
+
+最近 `approach` / `suppression` 行时间与 PO 报告时间相近，只作为时间线索，不作为用户身份独立证明。没有发现 `health/body_sense` 行；现有 health 样本类型为 `suppression`。
+
+### 解密与读取证据
+
+- PO 报告 App 内 `listEvents` 回读看到明文；该客户端回读作为解密成功的客户端侧证据。原 HTTP 状态码、响应体与端到端耗时未留存；本轮未索取或使用 access token。
+- 本次未用控制台遮蔽的函数密钥离线解密，也未逐字比较三个函数密钥。SQL 证明近期敏感域记录具有 Fernet envelope，配置页证明密钥变量存在；密钥值不入本检查点。
+
+### RLS 隔离
+
+| 检查 | SQL 执行 | 脱敏结果 |
+|---|---:|---|
+| `Anonymous`（未登录）查询 health/dating 可见行数 | 7 ms | `visible_sensitive_rows=0`。 |
+| 登录恢复后 `Anonymous` 复测 | 8 ms | `visible_sensitive_rows=0`。 |
+| Authenticated 使用合成的非生产探针身份查询 health/dating 可见行数 | 13 ms | `visible_sensitive_rows=0`；探针身份不对应已知用户。 |
+| 线上 `pg_policies` 元数据 | 20 ms | `events_owner` 对 `{authenticated}` / `ALL` 生效，`USING` 与 `WITH CHECK` 均为 `(user_id = auth.uid())`。 |
+
+已验证匿名及另一个合成认证用户上下文均不可见。合成身份不是 PO 的真实凭据或端到端登录。管理员数据编辑器显示过行级 `user_id` 与完整 Fernet token；这些值未复制或写入本检查点，也未与 PO 应用身份映射。只记录脱敏查询结果。所有数据库操作均为只读。
+
+### 当前结论与缺项
+
+- **部分通过**：近期 health/dating 记录以 Fernet token envelope 形式保存；三个函数配置中有遮蔽的 `FERNET_ENCRYPTION_KEY`；Anonymous 与合成的另一认证上下文读不到事件；PO 报告 App 明文回读成功。
+- **未闭环**：`health/body_sense` 样本不存在；样本用户归属未由本次查询独立证明；没有保存 HTTP 状态码和调用耗时；没有使用函数环境密钥直接解密样本。PO 报告的 App 回读仍只是客户端侧证据。
+- **下一步**：PO 使用已登录小程序提交一条 `health/body_sense` 后告知大致时间，再以只读 SQL 查询脱敏 envelope 与时间。若要独立验证解密，需通过已认证函数读回完成；不得把应用 token、key 或明文写入 KB。此前登录会话保持可用。
