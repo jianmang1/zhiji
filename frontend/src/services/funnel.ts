@@ -5,6 +5,7 @@
  * getFunnel 云函数属 Phase 3，未标「已实现」前不接。
  */
 import type { AnalyticsEventRow, Domain, EventRow, FunnelStep } from '../types/contract'
+import { KING_LABELS } from '../types/contract'
 
 /** 产品级 AARRR（§15.1 ①）；product.reactive 为召回环，单独展示不计入主漏斗 */
 export const PRODUCT_FUNNEL: readonly FunnelStep[] = [
@@ -222,36 +223,130 @@ export function buildWangBaiKouFunnel(events: readonly AnalyticsEventRow[]): Fun
  *   L4 体感（最终层） = body_sense 出现的天数（feel_score 1–10）
  * 各层"坚持天数"自然呈漏斗形，并标 `achieved`（该层是否记录过）。
  */
-const HEALTH_KING_LAYERS = [
-  { key: 'water_sleep', label: '喝大水和睡大觉' },
-  { key: 'workout', label: '运动' },
-  { key: 'suppression', label: '压抑指标' },
-  { key: 'body_sense', label: '体感' },
-] as const
+/* ───────── 君主分层漏斗（ADR-007 既有模式，扩展至三王）─────────
+ * 模式：按"真实打卡 events 在当天是否满足该层"计天数，各层天数自然呈漏斗形；
+ * 各层通过 `achieved` 标记"该层是否记录过"。与薄肌王原实现同构。
+ * 注意：层 key 仅前端展示用，不是契约 §8 的 step 枚举（不新增 step、无迁移）。
+ */
 
-function daysWithType(events: readonly EventRow[], types: readonly string[]): number {
-  const days = new Set<string>()
-  for (const event of events) {
-    if (types.includes(event.type)) days.add(event.ts.slice(0, 10))
-  }
-  return days.size
+export interface KingLayerSpec {
+  /** 层标识（前端内部用） */
+  key: string
+  label: string
+  /** 判定"这一天"的该域事件是否满足本层 */
+  match: (dayEvents: readonly EventRow[]) => boolean
 }
 
-export function buildHealthKingFunnel(events: readonly EventRow[]): FunnelReport {
-  const counts = [
-    daysWithType(events, ['water', 'sleep']),
-    daysWithType(events, ['workout']),
-    daysWithType(events, ['suppression']),
-    daysWithType(events, ['body_sense']),
-  ]
+/** 力王分层阈值（集中常量，便于调参与测试） */
+export const WORK_HOURS_TARGET_H = 8
+export const WORK_COMMUTE_LIMIT_MIN = 60
+/** 黄毛王「进阶」层阈值：达到"稳定约会"及以上（5 = 恋爱中，为最终目的） */
+export const DATING_ADVANCED_STAGE = 3
+
+function numOf(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0
+}
+
+function hasType(dayEvents: readonly EventRow[], types: readonly string[]): boolean {
+  return dayEvents.some((event) => types.includes(event.type))
+}
+
+function someEvent(
+  dayEvents: readonly EventRow[],
+  type: string,
+  predicate: (event: EventRow) => boolean,
+): boolean {
+  return dayEvents.some((event) => event.type === type && predicate(event))
+}
+
+/** 按 UTC 日期（YYYY-MM-DD）归组 —— 与王败寇的口径一致 */
+function groupByUtcDay(events: readonly EventRow[]): Map<string, EventRow[]> {
+  const days = new Map<string, EventRow[]>()
+  for (const event of events) {
+    const day = event.ts.slice(0, 10)
+    const bucket = days.get(day)
+    if (bucket) bucket.push(event)
+    else days.set(day, [event])
+  }
+  return days
+}
+
+function countDaysMeeting(
+  days: ReadonlyMap<string, EventRow[]>,
+  match: (dayEvents: readonly EventRow[]) => boolean,
+): number {
+  let count = 0
+  for (const dayEvents of days.values()) {
+    if (match(dayEvents)) count += 1
+  }
+  return count
+}
+
+/** 薄肌王四层（ADR-007 Task2，语义不变） */
+export const HEALTH_KING_LAYERS: readonly KingLayerSpec[] = [
+  { key: 'health.water_sleep', label: '喝大水和睡大觉', match: (d) => hasType(d, ['water', 'sleep']) },
+  { key: 'health.workout', label: '运动', match: (d) => hasType(d, ['workout']) },
+  { key: 'health.suppression', label: '压抑指标', match: (d) => hasType(d, ['suppression']) },
+  { key: 'health.body_sense', label: '体感', match: (d) => hasType(d, ['body_sense']) },
+]
+
+/** 力王四层：记录 → 工时达标 → 收入入账 → 通勤可控（数据全部来自 work_log，零迁移） */
+export const WORK_KING_LAYERS: readonly KingLayerSpec[] = [
+  { key: 'work.record', label: '打卡记录', match: (d) => hasType(d, ['work_log']) },
+  {
+    key: 'work.hours',
+    label: `工时达标（≥${WORK_HOURS_TARGET_H}h）`,
+    match: (d) => someEvent(d, 'work_log', (e) => numOf(e.payload.hours) >= WORK_HOURS_TARGET_H),
+  },
+  {
+    key: 'work.income',
+    label: '收入入账',
+    match: (d) => someEvent(d, 'work_log', (e) => numOf(e.payload.wage) > 0),
+  },
+  {
+    key: 'work.commute',
+    label: `通勤可控（≤${WORK_COMMUTE_LIMIT_MIN}min）`,
+    match: (d) => someEvent(d, 'work_log', (e) => numOf(e.payload.commute_min) <= WORK_COMMUTE_LIMIT_MIN),
+  },
+]
+
+/** 黄毛王四层：首触 → 破冰 → 约见 → 进阶（数据全部来自 approach/date/stage，零迁移） */
+export const DATING_KING_LAYERS: readonly KingLayerSpec[] = [
+  { key: 'dating.approach', label: '首触', match: (d) => hasType(d, ['approach']) },
+  {
+    key: 'dating.response',
+    label: '破冰',
+    match: (d) => someEvent(d, 'approach', (e) => e.payload.got_response === true),
+  },
+  { key: 'dating.date', label: '约见', match: (d) => hasType(d, ['date']) },
+  {
+    key: 'dating.stage_up',
+    label: '进阶（≥稳定约会）',
+    match: (d) => someEvent(d, 'stage', (e) => numOf(e.payload.stage) >= DATING_ADVANCED_STAGE),
+  },
+]
+
+/**
+ * 通用分层漏斗：层数、顺序、判定全部由 layers 决定。
+ * 转化率上限钳在 100%（某层覆盖天数可能多于上一层，不伪造也不显示 >100%）。
+ */
+export function buildLayeredKingFunnel(
+  domain: Domain,
+  title: string,
+  events: readonly EventRow[],
+  layers: readonly KingLayerSpec[],
+): FunnelReport {
+  const days = groupByUtcDay(events)
+  const counts = layers.map((layer) => countDaysMeeting(days, layer.match))
 
   let bottleneck: FunnelStep | null = null
   let worst = -1
-  const steps = HEALTH_KING_LAYERS.map((layer, index) => {
-    const count = counts[index] as number
-    const prev = index === 0 ? count : (counts[index - 1] as number)
-    const conversionFromPrev = index === 0 ? (count > 0 ? 1 : 0) : prev > 0 ? count / prev : 0
-    const dropOffPct = index === 0 ? 0 : prev > 0 ? Math.max(0, (1 - count / prev) * 100) : 0
+  const steps = layers.map((layer, index) => {
+    const count = counts[index] ?? 0
+    const prev = index === 0 ? count : counts[index - 1] ?? 0
+    const ratio = prev > 0 ? count / prev : 0
+    const conversionFromPrev = index === 0 ? (count > 0 ? 1 : 0) : Math.min(1, ratio)
+    const dropOffPct = index === 0 ? 0 : Math.max(0, (1 - ratio) * 100)
     if (dropOffPct > worst) {
       worst = dropOffPct
       bottleneck = layer.key as FunnelStep
@@ -269,34 +364,56 @@ export function buildHealthKingFunnel(events: readonly EventRow[]): FunnelReport
   const first = counts[0] ?? 0
   const last = counts[counts.length - 1] ?? 0
   return {
-    key: 'health',
-    title: '薄肌王',
+    key: domain,
+    title,
     steps,
     bottleneck,
     overallConversion: first > 0 && last > 0 ? last / first : 0,
   }
 }
 
-/** 生成两层漏斗：王败寇（产品级改名）+ 三王 */
+/** 薄肌王（保留原函数名，供既有调用与测试） */
+export function buildHealthKingFunnel(events: readonly EventRow[]): FunnelReport {
+  return buildLayeredKingFunnel('health', '薄肌王', events, HEALTH_KING_LAYERS)
+}
+
+/** 力王：基于真实打卡 events（work_log） */
+export function buildWorkKingFunnel(events: readonly EventRow[]): FunnelReport {
+  return buildLayeredKingFunnel('work', '力王', events, WORK_KING_LAYERS)
+}
+
+/** 黄毛王：基于真实打卡 events（approach/date/stage） */
+export function buildDatingKingFunnel(events: readonly EventRow[]): FunnelReport {
+  return buildLayeredKingFunnel('dating', '黄毛王', events, DATING_KING_LAYERS)
+}
+/**
+ * 生成漏斗：王败寇 + 三王。
+ * 三王均优先用**真实打卡 events**（ADR-007 模式）；未提供该域事件时回落到 analytics 埋点版。
+ */
 export function buildFunnelReports(
   events: readonly AnalyticsEventRow[],
   segment: Segment = {},
-  healthEvents?: readonly EventRow[],
+  kingEvents: Partial<Record<Domain, readonly EventRow[]>> = {},
 ): FunnelReport[] {
   const filtered = filterBySegment(events, segment)
   const counts = countByStep(filtered)
-  const healthReport =
-    healthEvents && healthEvents.length > 0
-      ? buildHealthKingFunnel(healthEvents)
-      : computeFunnel('health', '薄肌王', KING_FUNNELS.health, counts)
+
+  const reportFor = (
+    domain: Domain,
+    builder: (realEvents: readonly EventRow[]) => FunnelReport,
+  ): FunnelReport => {
+    const real = kingEvents[domain]
+    if (real && real.length > 0) return builder(real)
+    return computeFunnel(domain, KING_LABELS[domain], KING_FUNNELS[domain], counts)
+  }
+
   return [
     buildWangBaiKouFunnel(filtered),
-    computeFunnel('dating', '黄毛王', KING_FUNNELS.dating, counts),
-    healthReport,
-    computeFunnel('work', '力王', KING_FUNNELS.work, counts),
+    reportFor('dating', buildDatingKingFunnel),
+    reportFor('health', buildHealthKingFunnel),
+    reportFor('work', buildWorkKingFunnel),
   ]
 }
-
 /** 召回环：product.reactive 单步计数（单独展示） */
 export function reactiveCount(events: readonly AnalyticsEventRow[]): number {
   return events.filter((event) => event.step === 'product.reactive').length
