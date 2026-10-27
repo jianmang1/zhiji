@@ -1046,3 +1046,40 @@ FERNET 密钥恢复（控制台）已确认；health/dating 加密读写 E2E 已
 
 ### 5. 本轮结论
 审核被拒整改已完成「分工纠正 + 候选补丁挂分支 + 派发指令」三段：前端源码已移出 main（9702499 干净），整改逻辑以候选形式交由 DeepSeek 复核/PR；根因 2 的域名白名单与微搭授权解锁属 PO 平台动作，须与代码 PR 同步完成才能重新提审。Tech Lead 不代办前端源码与平台配置，严守三方分工。
+
+---
+
+## 第 31 轮 · 2026-10-27T15:4x+08:00（DeepSeek · 审核整改复核采纳）
+
+### 输入
+`docs/tech-lead-directive-audit-fix-20261026.md`（第 30 轮派发）：微信审核被拒（未登录强制授权 + 登录点击无响应），
+Tech Lead 候选补丁挂 `feat/frontend-audit-fix-20261026`（`7e0f45a`），按分工交 DeepSeek 复核/修订/开 PR。
+
+### 复核结论：采纳 + 5 处修订
+| # | 修订 | 原因 |
+|---|---|---|
+| 1 | `requireLogin` 由 `redirectTo` 改 `navigateTo` | redirectTo 销毁当前页 → 用户填了一半的打卡表单丢失；navigateTo 保留页面，登录后可返回继续 |
+| 2 | 新增 `guard.leaveLogin()` | 原实现一律 switchTab 回打卡页，从「方案」页跳来登录的用户会被错误带去打卡页；改为"栈内有上一页则 navigateBack" |
+| 3 | 四页 `authed` 初值读 authStore | 原 `useState(false)` 让**已登录用户**每次进页闪一下"游客浏览中" |
+| 4 | 重写 `e2e/critical-path.spec.ts` | 原 spec 断言"访问 entry/dashboard/plans 必跳登录页"，与新行为直接冲突，跑了必红 |
+| 5 | 新增 `tests/guard.test.ts`（8 例） | 新守卫逻辑此前零测试 |
+
+另修 README：`dist/weapp` → `dist/weapp-staging`（与 `project.config.json` 的 `miniprogramRoot` 对齐，避免照 README 传旧包）+ 新增 §3.1 游客模式与登录时机。
+
+### 门禁（全绿，DeepSeek 实跑）
+```
+tsc --noEmit            -> 0
+vitest run              -> 0  19 文件 / 137 用例（原 129 + 8）
+taro build --type weapp -> 0  35.09s；dist/weapp-staging/app.json 首页 = pages/entry/index
+taro build --type h5    -> 0  17.27s
+coverage                -> 行 87.26% / 分支 75.59% / 函数 84.51% / 语句 85.61%
+```
+
+### 交付
+- **已开 PR #12** → https://github.com/jianmang1/zhiji/pull/12 （head `feat/frontend-audit-fix-20261026`，base `main`）
+- 提交：`f62772f`（5 处修订）+ `eb3160f`（合并 main，带入本指令与第 30 轮心跳）
+
+### 遗留 / 提醒
+- **e2e 未实际执行**：Playwright 浏览器下载在本环境仍被阻断；spec 已按新行为重写，待有浏览器的环境跑。
+- **根因 ② 的真正修复在 PO 平台动作**（request 域名白名单 + 微搭授权），代码只兜底"失败必有反馈"，不能替代。
+- **Codex WIP 让路说明**：合并 main 前，工作树里有 Codex 未提交的 `docs/heartbeat-log.md`（"第30轮 Codex 承接加密 E2E"）与 `docs/po-action-items.md` 改动。为不覆盖其内容，已 `git stash push` 暂存为 **`stash@{0}`**（message: `codex-wip: heartbeat 第30轮 E2E + po-action-items`）。**请 Codex 在自己的提交里 `git stash pop` 取回**，不会被丢弃。

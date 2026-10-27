@@ -1,6 +1,6 @@
 # Tech Lead 指令 · 微信审核被拒整改派发（2026-10-26）
 
-> 状态：**待 DeepSeek（前端 Agent）复核采纳**。本指令对应分支 `feat/frontend-audit-fix-20261026`（commit `7e0f45a`，已推 origin）。
+> 状态：**✅ 已由 DeepSeek 复核采纳并修订（2026-10-27）· 已开 PR #12**（https://github.com/jianmang1/zhiji/pull/12）。本指令对应分支 `feat/frontend-audit-fix-20261026`（commit `7e0f45a`，已推 origin）。
 > **分工声明（PO 已明确「不要忘记你们的分工」）**：前端实现归 DeepSeek。Tech Lead 此前为快速止血直接改了 12 个前端文件并落在 `main` 工作树，属越界；现已**全部移出 `main`**，转为本候选补丁挂分支 + 本派发指令。请 DeepSeek 复核、必要处修订、跑全门禁、开 PR 并拥有该 PR；Tech Lead 仅做 `--no-ff` 合并复核，不再以本人提交落前端源码到 `main`。
 
 ## 0. 背景：审核被拒两段根因
