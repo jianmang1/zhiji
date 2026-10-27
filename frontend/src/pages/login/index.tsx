@@ -4,13 +4,12 @@
 import { Button, Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { CLOUDBASE_ENV, isCloudConfigured } from '../../services/cloudbase'
+import { leaveLogin } from '../../utils/guard'
 import { useAuthStore } from '../../stores/authStore'
 import { DOMAINS, KING_LABELS } from '../../types/contract'
 import { KING_COLORS } from '../../styles/kings'
 
 import './index.scss'
-
-const ENTRY_ROUTE = '/pages/entry/index'
 
 export default function LoginPage() {
   const status = useAuthStore((s) => s.status)
@@ -19,15 +18,23 @@ export default function LoginPage() {
 
   useDidShow(() => {
     if (useAuthStore.getState().status === 'authenticated') {
-      void Taro.switchTab({ url: ENTRY_ROUTE })
+      void leaveLogin()
     }
   })
 
   const handleLogin = async () => {
     const ok = await login()
     if (ok) {
-      await Taro.switchTab({ url: ENTRY_ROUTE })
+      await leaveLogin()
+      return
     }
+    // 审核整改：失败必须有明确反馈，杜绝"点击无响应"
+    const msg = useAuthStore.getState().error ?? '登录失败，请稍后重试'
+    await Taro.showToast({ title: msg, icon: 'none', duration: 3000 })
+  }
+
+  const handleBrowse = () => {
+    void leaveLogin()
   }
 
   const loading = status === 'restoring'
@@ -60,6 +67,10 @@ export default function LoginPage() {
 
         <Button className="login__button" loading={loading} disabled={loading} onClick={handleLogin}>
           {loading ? '登录中…' : '微信一键登录'}
+        </Button>
+
+        <Button className="login__browse" plain onClick={handleBrowse}>
+          先逛逛 · 游客模式
         </Button>
 
         {error && <Text className="login__error">{error}</Text>}

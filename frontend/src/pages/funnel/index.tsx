@@ -8,12 +8,14 @@
  * 指标：每步 count、步间转化率、单步 drop-off%、瓶颈步（drop-off 最大）高亮。
  */
 import { Button, Text, View } from '@tarojs/components'
-import { useDidShow } from '@tarojs/taro'
+import Taro, { useDidShow } from '@tarojs/taro'
+import { useState } from 'react'
 import { useAnalyticsStore } from '../../stores/analyticsStore'
+import { useAuthStore } from '../../stores/authStore'
 import type { Segment } from '../../services/funnel'
 import { KING_COLORS } from '../../styles/kings'
 import type { Domain } from '../../types/contract'
-import { ensureAuthenticated } from '../../utils/guard'
+import { restoreSession } from '../../utils/guard'
 
 import './index.scss'
 
@@ -30,14 +32,26 @@ export default function FunnelPage() {
   const refreshFunnel = useAnalyticsStore((s) => s.refreshFunnel)
   const loading = useAnalyticsStore((s) => s.funnelLoading)
   const funnelSource = useAnalyticsStore((s) => s.funnelSource)
+  /** 审核整改：游客可浏览（未登录显示横幅，不拉云端数据） */
+  const [authed, setAuthed] = useState(() => useAuthStore.getState().status === 'authenticated')
 
   useDidShow(() => {
     void (async () => {
-      if (await ensureAuthenticated()) {
+      const ok = await restoreSession()
+      setAuthed(ok)
+      if (ok) {
         await refreshFunnel()
       }
     })()
   })
+
+  const handleRefresh = () => {
+    if (!authed) {
+      void Taro.showToast({ title: '登录后可刷新你的漏斗数据', icon: 'none' })
+      return
+    }
+    void refreshFunnel()
+  }
 
   const update = (patch: Segment) => {
     const next: Segment = { ...segment, ...patch }
@@ -52,10 +66,23 @@ export default function FunnelPage() {
     <View className="funnel">
       <View className="funnel__head">
         <Text className="funnel__title">两层漏斗</Text>
-        <Button className="funnel__btn" size="mini" loading={loading} onClick={() => void refreshFunnel()}>
+        <Button className="funnel__btn" size="mini" loading={loading} onClick={handleRefresh}>
           刷新
         </Button>
       </View>
+
+      {!authed && (
+        <View className="funnel__guest">
+          <Text className="funnel__guestText">游客浏览中——登录后这里展示你的真实转化漏斗。</Text>
+          <Button
+            className="funnel__guestBtn"
+            size="mini"
+            onClick={() => void Taro.navigateTo({ url: '/pages/login/index' })}
+          >
+            去登录
+          </Button>
+        </View>
+      )}
 
       <Text className="funnel__note">
         {funnelSource === 'cloud'

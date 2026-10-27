@@ -25,11 +25,12 @@ import { plansForSpending } from '../../services/tracking'
 import { elapsedMs } from '../../services/perf'
 import { DOMAINS, KING_LABELS, isSensitiveDomain, type Domain } from '../../types/contract'
 import { useEventStore } from '../../stores/eventStore'
+import { useAuthStore } from '../../stores/authStore'
 import { useAnalyticsStore } from '../../stores/analyticsStore'
 import { useDraftStore } from '../../stores/draftStore'
 import { KING_COLORS } from '../../styles/kings'
 import { fromLocalInput, toLocalInputValue } from '../../utils/datetime'
-import { ensureAuthenticated } from '../../utils/guard'
+import { requireLogin, restoreSession } from '../../utils/guard'
 
 import './index.scss'
 
@@ -83,6 +84,8 @@ export default function EntryPage() {
   const [spendSaving, setSpendSaving] = useState(false)
   /** UX 优化 Task1：恢复草稿后短暂提示 */
   const [restored, setRestored] = useState(false)
+  /** 审核整改：游客可浏览 —— 是否已登录（未登录渲染游客横幅） */
+  const [authed, setAuthed] = useState(() => useAuthStore.getState().status === 'authenticated')
   const draftSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const submit = useEventStore((s) => s.submit)
   const refresh = useEventStore((s) => s.refresh)
@@ -114,7 +117,10 @@ export default function EntryPage() {
     // 进入即尝试恢复上次未提交的草稿
     restoreDraft(domain, type)
     void (async () => {
-      if (await ensureAuthenticated()) {
+      // 审核整改：只恢复登录态，不强制跳登录页（游客可浏览，提交时才引导登录）
+      const ok = await restoreSession()
+      setAuthed(ok)
+      if (ok) {
         // 供埋点判定"首次打卡"与"综合打卡"，同时给看板一份最新数据
         await refresh()
       }
@@ -167,6 +173,8 @@ export default function EntryPage() {
 
   const handleSubmit = async () => {
     if (!spec || sensitiveBlocked || submitting) return
+    // 审核整改：登录只挡在"真正写入"这一步，浏览/填表全程不强制
+    if (!(await requireLogin('记录打卡'))) return
     setSubmitting(true)
     setErrors({})
     setVia(null)
@@ -196,6 +204,7 @@ export default function EntryPage() {
 
   /** 力王支出：只发 log_spending 埋点（契约 §8），不写 events 表 */
   const handleSpending = async () => {
+    if (!(await requireLogin('记录支出'))) return
     const parsed = spendingSchema.safeParse({
       category: spendCategory,
       amount: Number(spendAmount),
@@ -217,6 +226,20 @@ export default function EntryPage() {
 
   return (
     <View className="entry">
+      {!authed && (
+        <View className="entry__guest">
+          <Text className="entry__guestText">
+            游客浏览中——随便看随便填；提交时才需要登录，数据按账号隔离保存。
+          </Text>
+          <Button
+            className="entry__guestBtn"
+            size="mini"
+            onClick={() => void Taro.navigateTo({ url: '/pages/login/index' })}
+          >
+            去登录
+          </Button>
+        </View>
+      )}
       <View className="entry__kings">
         {DOMAINS.map((d) => (
           <View
