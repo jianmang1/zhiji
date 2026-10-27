@@ -6,12 +6,12 @@
  * 内容按 §5.1 schema 解析；不符合格式时保留原始行并标注，不吞数据、不编造。
  */
 import { Button, Text, View } from '@tarojs/components'
-import { useDidShow } from '@tarojs/taro'
+import Taro, { useDidShow } from '@tarojs/taro'
 import { useState } from 'react'
 import { usePlanStore } from '../../stores/planStore'
 import { KING_COLORS } from '../../styles/kings'
 import { DOMAINS, KING_LABELS, type Domain } from '../../types/contract'
-import { ensureAuthenticated } from '../../utils/guard'
+import { requireLogin, restoreSession } from '../../utils/guard'
 
 import './index.scss'
 
@@ -36,16 +36,29 @@ export default function PlansPage() {
   const load = usePlanStore((s) => s.load)
   const generate = usePlanStore((s) => s.generate)
   const [domain, setDomain] = useState<Domain>('work')
+  /** 审核整改：游客可浏览（未登录显示横幅，不拉云端数据） */
+  const [authed, setAuthed] = useState(false)
 
   useDidShow(() => {
     void (async () => {
-      if (await ensureAuthenticated()) {
+      const ok = await restoreSession()
+      setAuthed(ok)
+      if (ok) {
         await load()
       }
     })()
   })
 
+  const handleRefresh = () => {
+    if (!authed) {
+      void Taro.showToast({ title: '登录后可查看你的方案', icon: 'none' })
+      return
+    }
+    void load()
+  }
+
   const handleGenerate = async () => {
+    if (!(await requireLogin('生成方案'))) return
     await generate(domain)
   }
 
@@ -53,10 +66,23 @@ export default function PlansPage() {
     <View className="plans">
       <View className="plans__head">
         <Text className="plans__title">行动方案</Text>
-        <Button className="plans__btn" size="mini" loading={loading} onClick={() => void load()}>
+        <Button className="plans__btn" size="mini" loading={loading} onClick={handleRefresh}>
           刷新
         </Button>
       </View>
+
+      {!authed && (
+        <View className="plans__guest">
+          <Text className="plans__guestText">游客浏览中——登录后基于你的打卡数据生成行动方案。</Text>
+          <Button
+            className="plans__guestBtn"
+            size="mini"
+            onClick={() => void Taro.navigateTo({ url: '/pages/login/index' })}
+          >
+            去登录
+          </Button>
+        </View>
+      )}
 
       <View className="plans__card">
         <Text className="plans__label">为哪位王生成方案</Text>

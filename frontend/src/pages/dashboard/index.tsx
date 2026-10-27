@@ -15,7 +15,7 @@ import { useEventStore } from '../../stores/eventStore'
 import { getEventTypeSpec } from '../../schemas/payload'
 import { KING_COLORS } from '../../styles/kings'
 import { DOMAINS, KING_LABELS, type Domain } from '../../types/contract'
-import { ensureAuthenticated } from '../../utils/guard'
+import { restoreSession } from '../../utils/guard'
 
 import '../../components/index.scss'
 import './index.scss'
@@ -40,10 +40,14 @@ export default function DashboardPage() {
   const loadPlans = usePlanStore((s) => s.load)
   const refreshExperience = useAnalyticsStore((s) => s.refreshExperience)
   const [expanded, setExpanded] = useState<Domain | null>(null)
+  /** 审核整改：游客可浏览（未登录显示横幅，数据为空态） */
+  const [authed, setAuthed] = useState(false)
 
   useDidShow(() => {
     void (async () => {
-      if (await ensureAuthenticated()) {
+      const ok = await restoreSession()
+      setAuthed(ok)
+      if (ok) {
         await refresh()
         await refreshExperience()
         await loadPlans()
@@ -73,6 +77,19 @@ export default function DashboardPage() {
             {unavailableDomains.map((d) => KING_LABELS[d]).join(' / ')}
             {' '}的明细要经 listEvents 云函数解密读取，端点还没配好 —— 这两王的评分暂按 0 计，不编数。
           </Text>
+        </View>
+      )}
+
+      {!authed && (
+        <View className="dash__guest">
+          <Text className="dash__guestText">游客浏览中——登录后这里显示你的三王评分与近期记录。</Text>
+          <Button
+            className="dash__guestBtn"
+            size="mini"
+            onClick={() => void Taro.navigateTo({ url: '/pages/login/index' })}
+          >
+            去登录
+          </Button>
         </View>
       )}
 
