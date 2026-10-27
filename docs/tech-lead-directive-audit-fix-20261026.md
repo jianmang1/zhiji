@@ -44,10 +44,11 @@ PO 上传版本被微信审核驳回，截图显示两类问题：
 - **不升 PO**（代码整改属执行层）；仅 heartbeat-log 记录。
 
 ## 4. PO 动作（平台配置，代码侧无法替代 —— Tech Lead 不代办）
-- **服务器域名白名单（根因 2 真正修复）**：微信公众平台 → 开发 → 开发设置 → 服务器域名 → request 合法域名，增加：
-  - `https://*.app.tcloudbase.com`（CloudBase 专属主机，前端 `.env` 的 `TARO_APP_CLOUDBASE_FN_BASE_URL` 即该域）
-  - `https://*.api.tcloudbasegateway.com`（CloudBase 网关）
-  - 开发者工具里 `urlCheck=false` 会掩盖未配置问题，审核版强制校验，故必须在此登记。
+- **服务器域名白名单（根因 2 真正修复）**：微信公众平台 → 开发 → 开发设置 → 服务器域名 → request 合法域名，**确保含以下两条（精确域名，不支持通配符 `*`，填 `*` 会报"非法字符"）**：
+  - `https://zhiji-d3gd1k9j43e7c20ac-1510872056.ap-shanghai.app.tcloudbase.com`（CloudBase 专属主机，前端 `.env` 的 `TARO_APP_CLOUDBASE_FN_BASE_URL` 即该域，recordEvent/listEvents/generatePlan 走此域）
+  - `https://tcb-api.tencentcloudapi.com`（CloudBase SDK 登录网关，`signInWithWechat` 走此域）
+  - ~~`https://*.api.tcloudbasegateway.com`~~（此前写法有误：通配符不被支持，且本项目无需该域，勿填）
+  - 开发者工具里 `urlCheck=false` 会掩盖未配置问题，审核版强制校验，故必须在此登记。其余已填域名（微搭/CloudBase 相关）保持不动。
 - **第三方授权解锁提审入口**：微信公众平台 → 设置 → 第三方设置，当前为「腾讯云微搭低代码」授权接管了「开发管理」，导致网页后台提审入口禁用。PO 二选一：① 管理该授权、收回开发权限后回测登录+提审；② 删除该授权后回测登录+提审（或改走微搭控制台提审）。
 - **整改后重新提审**：上述代码 PR 合 main + 域名白名单 + 授权处理后，重传版本、提交审核。
 
