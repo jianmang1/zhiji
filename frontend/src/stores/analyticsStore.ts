@@ -5,6 +5,7 @@ import { create } from 'zustand'
 import {
   insertAnalyticsEvent,
   selectAnalyticsEvents,
+  selectEventsByDomains,
   selectProfile,
   upsertProfile,
 } from '../services/rdb'
@@ -70,6 +71,8 @@ function emptyStatusCounts(): StatusCounts {
 
 export interface AnalyticsState {
   events: EventRow[]
+  /** 三王真实打卡事件（分层漏斗的数据源；健康/黄毛经云函数，力王经 rdb） */
+  kingEvents: Partial<Record<Domain, EventRow[]>>
   scores: ScoreResult[]
   perDomain: DomainCounts
   total: number
@@ -102,6 +105,7 @@ export interface AnalyticsState {
 
 export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
   events: [],
+  kingEvents: {},
   scores: [],
   perDomain: emptyDomainCounts(),
   total: 0,
@@ -158,25 +162,37 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     try {
       const rows = await selectAnalyticsEvents(500)
       const { segment } = get()
-      // 薄肌王漏斗始终基于真实打卡 events（ADR-007 Task2）；其余三层走云/本地聚合
-      let healthEvents: EventRow[] = []
-      if (isCloudFunctionConfigured()) {
-        try {
-          healthEvents = await listEventsRemote({ domain: 'health', limit: 500 })
-        } catch {
-          healthEvents = []
-        }
+
+      // 三王分层漏斗都基于真实打卡 events（ADR-007 模式）：
+      //   work 非敏感 → cloud.rdb()；health/dating 敏感 → listEvents 云函数
+      const kingEvents: Partial<Record<Domain, EventRow[]>> = {}
+      try {
+        kingEvents.work = await selectEventsByDomains(['work'], 500)
+      } catch {
+        // 读不到就回落到 analytics 埋点版，不伪造事件
       }
-      const baseFunnel = buildFunnelReports(rows, segment, healthEvents)
+      if (isCloudFunctionConfigured()) {
+        const [health, dating] = await Promise.allSettled([
+          listEventsRemote({ domain: 'health', limit: 500 }),
+          listEventsRemote({ domain: 'dating', limit: 500 }),
+        ])
+        if (health.status === 'fulfilled') kingEvents.health = health.value
+        if (dating.status === 'fulfilled') kingEvents.dating = dating.value
+      }
+
+      const baseFunnel = buildFunnelReports(rows, segment, kingEvents)
       let funnel = baseFunnel
       let funnelSource: 'local' | 'cloud' = 'local'
 
       if (isCloudFunctionConfigured()) {
         try {
           const remote = await fetchRemoteFunnels(segment, funnelRange())
-          // 用真实事件漏斗替换云端 analytics 版（薄肌王基于 events，不依赖埋点）
-          const healthReport = baseFunnel.find((r) => r.key === 'health')
-          funnel = remote.map((report) => (report.key === 'health' ? (healthReport ?? report) : report))
+          // 王败寇仍用云端 product.*；三王一律用真实事件分层版覆盖（不依赖埋点 step）
+          funnel = remote.map((report) =>
+            report.key === 'product'
+              ? report
+              : baseFunnel.find((local) => local.key === report.key) ?? report,
+          )
           funnelSource = 'cloud'
         } catch {
           // 云函数不可用（未部署 / 网络 / 鉴权）→ 回退本地计算；不伪造数据
@@ -187,6 +203,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
 
       set({
         analyticsEvents: rows,
+        kingEvents,
         funnel,
         funnelSource,
         reactive: reactiveCount(rows),
@@ -197,12 +214,11 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
       set({ funnelLoading: false, error: toMessage(error, '加载漏斗数据失败') })
     }
   },
-
   setSegment(segment) {
-    const { analyticsEvents } = get()
+    const { analyticsEvents, kingEvents } = get()
     set({
       segment,
-      funnel: buildFunnelReports(analyticsEvents, segment),
+      funnel: buildFunnelReports(analyticsEvents, segment, kingEvents),
       reactive: reactiveCount(analyticsEvents),
     })
     // 云端模式下分群需要重新向 getFunnel 聚合

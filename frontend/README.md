@@ -146,15 +146,22 @@ payload 字段（契约 §3，逐项对齐，测试 `tests/payload-schema.test.t
 已全部打通入口的步：`health.body_sense`（体感/围度打卡）、`work.spend`（记一笔支出）。
 仍未自动发出的步：全部 `*.retain`、`product.habit|value` —— 口径未定或属 Phase 3（`retain` 需 D7、`value` 需达段位/生成 plan），**不用假数据填充**。
 
-## 8. 两层漏斗（模块 7）
+## 8. 漏斗看板（王败寇 + 三王分层）
 
-产品级 AARRR：获取 → 激活 → 留存 → 习惯 → 价值 → 推荐（召回 `product.reactive` 单独一张卡）。
-各王：黄毛王 启动→首触→破冰→约见→进阶→脱单→推荐；薄肌王 启动→饮水→睡眠→运动→综合打卡→体感/围度→推荐；力王 启动→收入→支出→留存→推荐。
+**王败寇**（原产品级 AARRR 改名，ADR-007）：陌生人 → 好奇猫 → 留存 → 落魄谷 → 少年归，基于 `analytics_events` 的 `product.*` 步骤 + 阈值达成（`记录天数 >3` / `>10` / `完成打卡 >10`）。召回环 `product.reactive` 单独一张卡。
 
-每步展示 count、步间转化率、单步 drop-off%，**瓶颈步 = drop-off 最大者**（红框高亮）。
-支持按 `channel` / `user_type` 分群（数据来自 `analytics_events`，`segments` 由实际数据枚举）。
-v1 全部前端本地算；`getFunnel` 云函数属 Phase 3。
+**三王分层漏斗**（ADR-007 既有模式，2026-10-27 扩至力王/黄毛王）：全部基于**用户真实打卡 `events`**，按"当天是否满足该层"计天数，长期累积：
 
+| 王 | L1 | L2 | L3 | L4（终层） | 数据来源 |
+|---|---|---|---|---|---|
+| 薄肌王 | 喝大水和睡大觉 | 运动 | 压抑指标 | 体感（`feel_score` 1–10） | `water/sleep`、`workout`、`suppression`、`body_sense` |
+| 力王 | 打卡记录 | 工时达标（≥8h） | 收入入账 | 通勤可控（≤60min） | 仅 `work_log`（hours/wage/commute_min） |
+| 黄毛王 | 首触 | 破冰（有回应） | 约见 | 进阶（≥稳定约会） | `approach`、`date`、`stage` |
+
+- 各层展示 count（天数）、步间转化率、drop-off%，**瓶颈步 = drop-off 最大者**（红框高亮）；`achieved` 标记该层是否记录过。
+- 转化率钳在 ≤100%（某层覆盖天数可能多于上一层时不显示 >100%），流失率不为负 —— 不伪造、不美化。
+- **零迁移 / Codex 零改动**：层判定只读既有 `events.type` 与 `payload` 字段；不新增 step、不改表结构。
+- 数据来源：力王经 `cloud.rdb()`（非敏感）；薄肌王/黄毛王经 `listEvents` 云函数（加密域）。读不到时回落到 `analytics_events` 埋点版（步数更多，属降级口径）。
 ## 9. 视觉（模块 5–7 统一，产品定义 §7 新粗野主义）
 
 - 粗黑边 3px、零圆角、硬阴影 `6px 6px 0 #000`、大号粗体、高饱和撞色。

@@ -220,7 +220,7 @@ export default function FunnelPage() {
       </View>
 
       <Text className="funnel__foot">
-        完整聚合（渠道质量分 / 体验指标 / A/B / 趋势）属 Phase 3，由 Codex 的 getFunnel 承担。
+        三王按真实打卡分层（ADR-007）：薄肌王 饮水睡眠→运动→压抑→体感；力王 记录→工时→收入→通勤；黄毛王 首触→破冰→约见→进阶。完整聚合（渠道质量分 / 趋势 / A/B）属 Phase 3。
       </Text>
     </View>
   )

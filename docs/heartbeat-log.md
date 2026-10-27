@@ -1099,3 +1099,60 @@ coverage                -> 行 87.26% / 分支 75.59% / 函数 84.51% / 语句 8
 1. request 合法域名两条精确值（勿用 `*`）：`https://zhiji-d3gd1k9j43e7c20ac-1510872056.ap-shanghai.app.tcloudbase.com` + `https://tcb-api.tencentcloudapi.com`。
 2. 处理「腾讯云微搭低代码」第三方授权，解锁提审入口。
 3. 重传版本（含 d823255 代码）→ 提审。
+
+---
+
+## 第 33 轮 · 2026-10-27T15:24+08:00（Codex · health/dating 加密 E2E 路线 A 服务端补核）
+
+### 结果
+- PO 确认小程序样本已写入并回读。初次打开控制台时登录态失效；PO 随后重新登录，Codex 已用同一 CloudBase 会话完成控制台只读核验。
+- `recordEvent` / `listEvents` / `generatePlan` 配置页均显示 `FERNET_ENCRYPTION_KEY` 存在（值保持遮蔽）；四个 HTTP 函数均显示正常。近期 sensitive rows 聚合中所有 payload 都有 `_encrypted_v1`，token 前缀匹配 `gAAAA`。
+- SQL Editor 中 `dating/approach` 与 `health/suppression` 最新样本时间为 2026-10-23 11:22+08；仅在 checkpoint 保存长度和首尾掩码，不写 payload 明文或 uid。PO 报告 App `listEvents` 回读明文（HTTP 状态与耗时未留存）。
+- RLS：线上 `events_owner` policy 为 `{authenticated}` / `ALL`，`USING` 与 `WITH CHECK` 均为 `user_id = auth.uid()`；Anonymous 角色敏感域查询结果 0 行。
+- **部分通过而非闭环**：近 14 天 `health/body_sense` 行数为 0；本次 SQL 未选取 user_id，样本归属未被独立证明；未模拟第二个认证用户。详见 `docs/integration-checkpoint-20261021.md`「敏感域 E2E 路线 A · 服务端补核」。
+- 查询执行耗时（非 HTTP RTT）：汇总 19 ms、类型/前缀检查 13 ms、脱敏样本 18 ms、RLS policy 20 ms、Anonymous 可见行数 7 ms。未输入或记录应用 token / Fernet key。
+
+### 下一步
+- 请 PO 在已登录小程序提交 `health/body_sense`（不需要把任何敏感值发到聊天），然后告知大致时间；Codex 再做只读密文核验。此前 CloudBase 标签保持登录供后续检查。
+
+---
+
+## 第 33 轮 · 2026-10-27T15:5x+08:00（DeepSeek · 力王/黄毛王漏斗重构）
+
+### 输入
+PO 派单：按 **ADR-007 薄肌王四层漏斗既有模式**，把力王（work）与黄毛王（dating）重构为**基于真实打卡 events** 的分层漏斗；
+约束：零数据库迁移、Codex 零改动、勿触碰 `cloudbase.ts` / `authStore.ts` / `guard.ts`。
+
+### 本轮修订点
+| # | 修订 | 说明 |
+|---|---|---|
+| 1 | 力王四层 | 打卡记录(`work_log`) → 工时达标(≥8h) → 收入入账(wage>0) → 通勤可控(≤60min)，全部只读 `work_log` 既有字段 |
+| 2 | 黄毛王四层 | 首触(`approach`) → 破冰(`got_response=true`) → 约见(`date`) → 进阶(`stage≥3`) |
+| 3 | 通用分层器 | 抽出 `buildLayeredKingFunnel` + `KingLayerSpec`；**薄肌王改走同一实现**（语义/标签/计数不变，回归测试守护） |
+| 4 | 非单调钳制 | 某层覆盖天数可能多于上层（如只记约会不记搭讪）→ 转化率钳 ≤100%、流失率不为负，不美化不造假 |
+| 5 | 数据源扩展 | `buildFunnelReports` 第三参 `healthEvents` → `kingEvents`（三域）；力王走 `cloud.rdb()`、薄肌王/黄毛王走 `listEvents`；缺失该域时回落 analytics 埋点版 |
+| 6 | 云端覆盖逻辑 | 云端模式下 `product`(王败寇) 用 getFunnel 结果，三王一律用真实事件分层版覆盖（不再只覆盖 health） |
+| 7 | 文档 | README §8 重写为三王分层表；漏斗页脚补分层口径；未改页面结构（通用渲染） |
+
+### 约束核对
+- **零迁移**：未新增 event type / 未改表 / 未新增 §8 step 枚举（层 key 仅前端展示用）。
+- **Codex 零改动**：未触碰 `cloudbase/`，未改云函数签名；`getFunnel` 仍只服务王败寇。
+- **未触碰** `cloudbase.ts` / `authStore.ts` / `guard.ts`（guard 保持 PR#12 落地状态，本单无需改动）。
+
+### 门禁结果（DeepSeek 实跑）
+```
+tsc --noEmit            -> 0
+vitest run              -> 0   20 文件 / 148 用例（原 137 + 11 新增）
+taro build --type weapp -> 0   19.43s
+taro build --type h5    -> 0   13.34s
+产物 app.json 首页       -> pages/entry/index（未动顺序）
+coverage                -> 行 88.11% / 分支 75.33% / 函数 86.88% / 语句 86.63%
+```
+
+### 交付
+- **已开 PR #13** → https://github.com/jianmang1/zhiji/pull/13 （head `feat/frontend-funnel-work-dating-20261027`，base `main`，commit `a0cd4a3`）
+
+### 遗留 / 提醒
+- 阈值是**前端展示常量**（`WORK_HOURS_TARGET_H=8` / `WORK_COMMUTE_LIMIT_MIN=60` / `DATING_ADVANCED_STAGE=3`），PO 调口径改一处即可；未写入契约（非数据契约）。
+- 黄毛王终层取「≥稳定约会」而非「恋爱中」，避免层数被极端值压平；README 已注明。
+- **Codex WIP 让路**：本轮开工前工作区有 Codex 未提交的 `heartbeat-log.md` 与 `po-action-items.md` 改动，已 `git stash push` 为 **`stash@{0}`**（message `codex-wip-20261027b`）；另有 `docs/integration-checkpoint-20261021.md` 的未提交改动仍在工作区（未被我提交）。请 Codex 取回/收口。

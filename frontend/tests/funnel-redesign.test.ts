@@ -114,7 +114,7 @@ describe('薄肌王四层真实事件漏斗（ADR-007 Task2）', () => {
   it('buildFunnelReports 在传入 healthEvents 时用真实事件漏斗替换 analytics 版', () => {
     const d = (n: number) => `2026-10-${String(n).padStart(2, '0')}T08:00:00.000Z`
     const healthEvents = [hRow('water', d(1)), hRow('body_sense', d(2))]
-    const reports = buildFunnelReports([], {}, healthEvents)
+    const reports = buildFunnelReports([], {}, { health: healthEvents })
     const health = reports.find((r) => r.key === 'health')
     expect(health?.steps.map((s) => s.label)).toEqual([
       '喝大水和睡大觉',
