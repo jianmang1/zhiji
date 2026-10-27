@@ -1099,3 +1099,18 @@ coverage                -> 行 87.26% / 分支 75.59% / 函数 84.51% / 语句 8
 1. request 合法域名两条精确值（勿用 `*`）：`https://zhiji-d3gd1k9j43e7c20ac-1510872056.ap-shanghai.app.tcloudbase.com` + `https://tcb-api.tencentcloudapi.com`。
 2. 处理「腾讯云微搭低代码」第三方授权，解锁提审入口。
 3. 重传版本（含 d823255 代码）→ 提审。
+
+---
+
+## 第 33 轮 · 2026-10-27T15:24+08:00（Codex · health/dating 加密 E2E 路线 A 服务端补核）
+
+### 结果
+- PO 确认小程序样本已写入并回读。初次打开控制台时登录态失效；PO 随后重新登录，Codex 已用同一 CloudBase 会话完成控制台只读核验。
+- `recordEvent` / `listEvents` / `generatePlan` 配置页均显示 `FERNET_ENCRYPTION_KEY` 存在（值保持遮蔽）；四个 HTTP 函数均显示正常。近期 sensitive rows 聚合中所有 payload 都有 `_encrypted_v1`，token 前缀匹配 `gAAAA`。
+- SQL Editor 中 `dating/approach` 与 `health/suppression` 最新样本时间为 2026-10-23 11:22+08；仅在 checkpoint 保存长度和首尾掩码，不写 payload 明文或 uid。PO 报告 App `listEvents` 回读明文（HTTP 状态与耗时未留存）。
+- RLS：线上 `events_owner` policy 为 `{authenticated}` / `ALL`，`USING` 与 `WITH CHECK` 均为 `user_id = auth.uid()`；Anonymous 角色敏感域查询结果 0 行。
+- **部分通过而非闭环**：近 14 天 `health/body_sense` 行数为 0；本次 SQL 未选取 user_id，样本归属未被独立证明；未模拟第二个认证用户。详见 `docs/integration-checkpoint-20261021.md`「敏感域 E2E 路线 A · 服务端补核」。
+- 查询执行耗时（非 HTTP RTT）：汇总 19 ms、类型/前缀检查 13 ms、脱敏样本 18 ms、RLS policy 20 ms、Anonymous 可见行数 7 ms。未输入或记录应用 token / Fernet key。
+
+### 下一步
+- 请 PO 在已登录小程序提交 `health/body_sense`（不需要把任何敏感值发到聊天），然后告知大致时间；Codex 再做只读密文核验。此前 CloudBase 标签保持登录供后续检查。
