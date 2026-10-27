@@ -11,6 +11,7 @@ import { Button, Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useState } from 'react'
 import { useAnalyticsStore } from '../../stores/analyticsStore'
+import { useAuthStore } from '../../stores/authStore'
 import type { Segment } from '../../services/funnel'
 import { KING_COLORS } from '../../styles/kings'
 import type { Domain } from '../../types/contract'
@@ -32,7 +33,7 @@ export default function FunnelPage() {
   const loading = useAnalyticsStore((s) => s.funnelLoading)
   const funnelSource = useAnalyticsStore((s) => s.funnelSource)
   /** 审核整改：游客可浏览（未登录显示横幅，不拉云端数据） */
-  const [authed, setAuthed] = useState(false)
+  const [authed, setAuthed] = useState(() => useAuthStore.getState().status === 'authenticated')
 
   useDidShow(() => {
     void (async () => {

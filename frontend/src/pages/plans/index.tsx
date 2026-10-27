@@ -9,6 +9,7 @@ import { Button, Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useState } from 'react'
 import { usePlanStore } from '../../stores/planStore'
+import { useAuthStore } from '../../stores/authStore'
 import { KING_COLORS } from '../../styles/kings'
 import { DOMAINS, KING_LABELS, type Domain } from '../../types/contract'
 import { requireLogin, restoreSession } from '../../utils/guard'
@@ -37,7 +38,7 @@ export default function PlansPage() {
   const generate = usePlanStore((s) => s.generate)
   const [domain, setDomain] = useState<Domain>('work')
   /** 审核整改：游客可浏览（未登录显示横幅，不拉云端数据） */
-  const [authed, setAuthed] = useState(false)
+  const [authed, setAuthed] = useState(() => useAuthStore.getState().status === 'authenticated')
 
   useDidShow(() => {
     void (async () => {

@@ -29,11 +29,11 @@ pnpm install --no-frozen-lockfile   # 首次安装（见 §8 限制 2）
 pnpm typecheck                      # tsc --noEmit（strict，零 any）
 pnpm test                           # Vitest：10 文件 / 70 用例
 pnpm coverage                       # 覆盖率（v8）
-pnpm build:weapp                    # → dist/weapp
+pnpm build:weapp                    # → dist/weapp-staging（project.config.json 的 miniprogramRoot 指向此处）
 pnpm build:h5                       # → dist/h5
 ```
 
-微信开发者工具导入本目录；`miniprogramRoot` 已指向 `dist/weapp/`。双端产物分目录落盘，互不覆盖。
+微信开发者工具导入本目录；`miniprogramRoot` 已指向 `dist/weapp-staging/`（上传用此目录）。双端产物分目录落盘，互不覆盖。
 
 ## 3. 环境变量（构建期注入，前缀 `TARO_APP_`）
 
@@ -42,6 +42,18 @@ pnpm build:h5                       # → dist/h5
 | `TARO_APP_CLOUDBASE_ENV` | `zhiji-d3gd1k9j43e7c20ac` | CloudBase 环境 ID（ADR-002） |
 | `TARO_APP_CLOUDBASE_FN_BASE_URL` | 空 | 云函数 HTTP 端点基址；**空 = 云函数未就绪** |
 | `TARO_APP_CLOUDBASE_DISABLED` | `false` | `true` 时跳过 `cloudbase.init`（仅 e2e / 离线构建） |
+
+## 3.1 游客模式与登录时机（微信审核整改 · 2026-10-26）
+
+审核被拒两段根因：① 未登录强制授权；② 登录点击无响应。整改后的行为约定：
+
+- **首页 = 打卡页**（`pages[0] = pages/entry/index`），未登录可直接浏览三王、填表、切换维度。
+- **不强制登录**：页面进入只调 `guard.restoreSession()`（仅恢复登录态、不跳转），游客看到「游客浏览中」横幅 + 「去登录」按钮。
+- **写动作才要登录**：`记录打卡` / `记录支出` / `生成方案` 首行调 `guard.requireLogin(action)` → 未登录 `showToast('登录后才能…')` + `navigateTo(LOGIN_ROUTE)`（用 navigateTo 而非 redirectTo，保留已填内容）。
+- **登录页必有响应**：失败 `showToast` 明确错误；成功与「先逛逛 · 游客模式」都走 `guard.leaveLogin()`（栈内有上一页则 `navigateBack`，否则回打卡页），不会卡在原地。
+- **游客不拉云端数据**：dashboard / funnel / plans 仅在 `restoreSession()===true` 时刷新；未登录显示空态，刷新按钮给提示而非静默失败。
+
+> 根因 ② 的**真正修复在平台侧**：微信公众平台 → 开发设置 → 服务器域名 request 白名单需登记 CloudBase 域名，否则审核版会静默拦截请求；代码侧只兜底"失败必有反馈"。
 
 ## 4. 数据访问路由（契约 §5 注）
 

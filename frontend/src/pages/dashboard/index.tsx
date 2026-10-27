@@ -11,6 +11,7 @@ import { useState } from 'react'
 import TierBadge from '../../components/TierBadge'
 import { useAnalyticsStore } from '../../stores/analyticsStore'
 import { usePlanStore } from '../../stores/planStore'
+import { useAuthStore } from '../../stores/authStore'
 import { useEventStore } from '../../stores/eventStore'
 import { getEventTypeSpec } from '../../schemas/payload'
 import { KING_COLORS } from '../../styles/kings'
@@ -41,7 +42,7 @@ export default function DashboardPage() {
   const refreshExperience = useAnalyticsStore((s) => s.refreshExperience)
   const [expanded, setExpanded] = useState<Domain | null>(null)
   /** 审核整改：游客可浏览（未登录显示横幅，数据为空态） */
-  const [authed, setAuthed] = useState(false)
+  const [authed, setAuthed] = useState(() => useAuthStore.getState().status === 'authenticated')
 
   useDidShow(() => {
     void (async () => {

@@ -25,6 +25,7 @@ import { plansForSpending } from '../../services/tracking'
 import { elapsedMs } from '../../services/perf'
 import { DOMAINS, KING_LABELS, isSensitiveDomain, type Domain } from '../../types/contract'
 import { useEventStore } from '../../stores/eventStore'
+import { useAuthStore } from '../../stores/authStore'
 import { useAnalyticsStore } from '../../stores/analyticsStore'
 import { useDraftStore } from '../../stores/draftStore'
 import { KING_COLORS } from '../../styles/kings'
@@ -84,7 +85,7 @@ export default function EntryPage() {
   /** UX 优化 Task1：恢复草稿后短暂提示 */
   const [restored, setRestored] = useState(false)
   /** 审核整改：游客可浏览 —— 是否已登录（未登录渲染游客横幅） */
-  const [authed, setAuthed] = useState(false)
+  const [authed, setAuthed] = useState(() => useAuthStore.getState().status === 'authenticated')
   const draftSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const submit = useEventStore((s) => s.submit)
   const refresh = useEventStore((s) => s.refresh)

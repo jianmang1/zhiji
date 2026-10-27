@@ -4,13 +4,12 @@
 import { Button, Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { CLOUDBASE_ENV, isCloudConfigured } from '../../services/cloudbase'
+import { leaveLogin } from '../../utils/guard'
 import { useAuthStore } from '../../stores/authStore'
 import { DOMAINS, KING_LABELS } from '../../types/contract'
 import { KING_COLORS } from '../../styles/kings'
 
 import './index.scss'
-
-const ENTRY_ROUTE = '/pages/entry/index'
 
 export default function LoginPage() {
   const status = useAuthStore((s) => s.status)
@@ -19,14 +18,14 @@ export default function LoginPage() {
 
   useDidShow(() => {
     if (useAuthStore.getState().status === 'authenticated') {
-      void Taro.switchTab({ url: ENTRY_ROUTE })
+      void leaveLogin()
     }
   })
 
   const handleLogin = async () => {
     const ok = await login()
     if (ok) {
-      await Taro.switchTab({ url: ENTRY_ROUTE })
+      await leaveLogin()
       return
     }
     // 审核整改：失败必须有明确反馈，杜绝"点击无响应"
@@ -35,7 +34,7 @@ export default function LoginPage() {
   }
 
   const handleBrowse = () => {
-    void Taro.switchTab({ url: ENTRY_ROUTE })
+    void leaveLogin()
   }
 
   const loading = status === 'restoring'

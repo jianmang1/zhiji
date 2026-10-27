@@ -6,6 +6,7 @@ import { isCloudConfigured } from '../services/cloudbase'
 import { useAuthStore } from '../stores/authStore'
 
 export const LOGIN_ROUTE = '/pages/login/index'
+export const ENTRY_ROUTE = '/pages/entry/index'
 
 /**
  * 仅恢复登录态，不跳转 —— 供页面"游客可浏览"使用。
@@ -33,8 +34,22 @@ export async function requireLogin(action = '继续操作'): Promise<boolean> {
     return true
   }
   await Taro.showToast({ title: `登录后才能${action}`, icon: 'none', duration: 2000 })
-  await Taro.redirectTo({ url: LOGIN_ROUTE })
+  // 用 navigateTo 而非 redirectTo：保留当前页（含已填表单），登录后可返回继续
+  await Taro.navigateTo({ url: LOGIN_ROUTE })
   return false
+}
+
+/**
+ * 离开登录页：有上一页就返回（保留用户正在填的内容），否则回打卡首页。
+ * 登录成功与「先逛逛」两路共用。
+ */
+export async function leaveLogin(): Promise<void> {
+  const pages = Taro.getCurrentPages()
+  if (Array.isArray(pages) && pages.length > 1) {
+    await Taro.navigateBack()
+    return
+  }
+  await Taro.switchTab({ url: ENTRY_ROUTE })
 }
 
 export async function ensureAuthenticated(): Promise<boolean> {
